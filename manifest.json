@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Selopti",
+  "version": "0.1.0",
+  "description": "Logs new .classified-card elements on SeLoger pages.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://www.seloger.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://www.seloger.com/*"],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["*://www.seloger.com/*"],
+      "js": ["utils.js", "ui.js", "engine.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "selopti@infuseting.dev",
+      "strict_min_version": "109.0"
+    }
+  }
+}
