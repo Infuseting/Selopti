@@ -1,0 +1,24 @@
+{
+  "name": "seloger-opti",
+  "version": "1.0.0",
+  "description": "",
+  "main": "content.js",
+  "scripts": {
+    "build": "esbuild src/content.js --bundle --outfile=dist/content.js",
+    "watch": "esbuild src/content.js --bundle --outfile=dist/content.js --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Infuseting/Selopti.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Infuseting/Selopti/issues"
+  },
+  "homepage": "https://github.com/Infuseting/Selopti#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

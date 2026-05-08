@@ -11,14 +11,12 @@
   ],
   "content_scripts": [
     {
-      "matches": ["*://www.seloger.com/*"],
-      "js": ["interceptor.js"],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "matches": ["*://www.seloger.com/*"],
-      "js": ["utils.js", "ui.js", "engine.js", "content.js"],
+      "matches": [
+        "*://www.seloger.com/*"
+      ],
+      "js": [
+        "/dist/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
