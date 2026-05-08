@@ -1,97 +1,75 @@
-import { SelogerLinkExtractor, getFeatures, getPriceInfo, getPriceRegion, getEnergy } from './extract.js';
-import { fetchUrl } from './util.js';
+import { DOMScanner } from './scanner.js';
+import { PropertyDataProvider } from './provider.js';
+import { UIHTMLRenderer } from './ui.js';
+import { geoManager } from './geo.js';
+import { SeloptiInserter } from './insert.js';
+import { getData, getBasicStats } from './extract.js';
+import { rentManager } from './rent.js';
 
 export class SeloptiEngine {
   constructor() {
-    this.ID_PATTERN = /^(?:classified-card-(?:carouselitem-)?|carouselitem-)(.+)$/;
-    this.observedElements = new Set();
-    this.observer = null;
+    this.scanner = new DOMScanner((id, element, url) => this.handleMatchedElement(id, element, url));
+    this.inserter = new SeloptiInserter();
   }
 
   init() {
-    this.startObserver(document);
+    this.scanner.start(document);
   }
 
-  startObserver(root = document) {
-    if (this.observer) {
-      return;
-    }
+  handleMatchedElement(id, element, fullHref) {
+    PropertyDataProvider.fetchPropertyData(fullHref).then((data) => {
+      const extractData = getData(data);
+      const basicStats = getBasicStats(data);
 
-    /**
-     * @param {Node} node
-     */
-    const scan = (node) => {
-      if (node.nodeType !== Node.ELEMENT_NODE) {
-        return;
-      }
+      geoManager.subscribe(id, (geoData) => {
+        rentManager.fetchLocalRent(basicStats.zipCode, basicStats.surface).then(rentEstimate => {
+          // Calculations for simulations
+          const price = basicStats.price || 0;
+          const bedrooms = basicStats.bedrooms || 0;
+          
+          // 1. Classic Rental
+          const classicMonthly = rentEstimate?.estimatedRent || 0;
+          const classicAnnual = classicMonthly * 12;
+          const classicYield = price > 0 ? (classicAnnual / price) * 100 : 0;
 
-      const element = node;
-      if (element.id) {
-        const match = this.ID_PATTERN.exec(element.id);
-        if (match && !this.observedElements.has(element)) {
-          this.observedElements.add(element);
-          this.handleMatchedElement(match[1], element);
-        }
-      }
+          // 2. Colocation Rental
+          // Based on a studio baseline (20m2) with a 0.85 attractive coefficient
+          const rentPerSqm = rentEstimate?.rentPerSqm || 0;
+          const studioBaseline = Math.round(rentPerSqm * 20);
+          const roomPrice = Math.round(studioBaseline * 0.85);
+          const colocMonthly = roomPrice * bedrooms;
+          const colocAnnual = colocMonthly * 12;
+          const colocYield = price > 0 ? (colocAnnual / price) * 100 : 0;
 
-      const children = element.querySelectorAll("[id]");
-      for (const child of children) {
-        const match = this.ID_PATTERN.exec(child.id);
-        if (match && !this.observedElements.has(child) && match[1] != "autopromo") {
-          this.observedElements.add(child);
-          this.handleMatchedElement(match[1], child);
-        }
-      }
-    };
+          const finalData = {
+            ...extractData,
+            coordinates: geoData.coordinates,
+            georisques: geoData.georisques,
+            rentEstimate: rentEstimate,
+            simulations: {
+              classic: {
+                monthlyRent: classicMonthly,
+                annualRevenue: classicAnnual,
+                grossYield: classicYield.toFixed(2) + " %"
+              },
+              colocation: {
+                roomPrice: roomPrice,
+                monthlyRent: colocMonthly,
+                annualRevenue: colocAnnual,
+                grossYield: colocYield.toFixed(2) + " %",
+                params: {
+                  bedrooms: bedrooms,
+                  studioBaseline: studioBaseline,
+                  coefficient: 0.85
+                }
+              }
+            }
+          };
 
-    this.observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const addedNode of mutation.addedNodes) {
-          scan(addedNode);
-        }
-      }
-    });
-
-    this.observer.observe(root, {
-      childList: true,
-      subtree: true,
-    });
-
-    scan(root);
-  }
-
-  stopObserver() {
-    if (!this.observer) {
-      return;
-    }
-
-    this.observer.disconnect();
-    this.observer = null;
-  }
-
-  /**
-   * @param {string} id
-   * @param {Element} element
-   */
-  handleMatchedElement(id, element) {
-    const fullHref = SelogerLinkExtractor.getLink(element, id);
-    if (!fullHref) {
-      return;
-    }
-    
-    fetchUrl(fullHref).then((result) => {
-      if (result.success !== "true") {
-        console.error('Selopti fetch failed for', id, result.error || []);
-        return;
-      }
-
-      const text = result.data && result.data[0] ? result.data[0].text : '';
-      const priceInfo = getPriceInfo(text);
-      const priceRegion = getPriceRegion(text);
-      const features = getFeatures(text);
-      const energy = getEnergy(text);
-      console.log(id);
-      console.log(energy);
+          const html = UIHTMLRenderer.renderDetailsHTML(finalData);
+          this.inserter.insertHTML(id, element, html);
+        });
+      });
     });
   }
 }

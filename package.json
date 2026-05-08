@@ -4,8 +4,8 @@
   "description": "",
   "main": "content.js",
   "scripts": {
-    "build": "esbuild src/content.js --bundle --outfile=dist/content.js",
-    "watch": "esbuild src/content.js --bundle --outfile=dist/content.js --watch"
+    "build": "esbuild src/content.js --bundle --outfile=dist/content.js && esbuild src/injector.js --bundle --outfile=dist/injector.js",
+    "watch": "esbuild src/content.js src/injector.js --bundle --outdir=dist --watch"
   },
   "repository": {
     "type": "git",

@@ -9,6 +9,12 @@
   "host_permissions": [
     "*://www.seloger.com/*"
   ],
+  "web_accessible_resources": [
+    {
+      "resources": ["dist/injector.js"],
+      "matches": ["*://www.seloger.com/*"]
+    }
+  ],
   "content_scripts": [
     {
       "matches": [
@@ -17,7 +23,7 @@
       "js": [
         "/dist/content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "browser_specific_settings": {
