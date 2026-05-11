@@ -8,10 +8,10 @@ export class RentDataManager {
    * @param {string} zipCode - The zip code of the property
    * @returns {Promise<number|null>} The estimated rent, or null if API is not ready
    */
-  async fetchLocalRent(zipCode, surface = 20) {
+  async fetchLocalRent(zipCode) {
     if (!zipCode) return null;
     try {
-      const response = await fetch(`${this.apiUrl}/estimate?zipCode=${zipCode}&surface=${surface}`);
+      const response = await fetch(`${this.apiUrl}/estimate?zipCode=${zipCode}`);
       if (response.ok) {
         return await response.json();
       }

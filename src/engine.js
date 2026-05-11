@@ -17,53 +17,115 @@ export class SeloptiEngine {
   }
 
   handleMatchedElement(id, element, fullHref) {
-    PropertyDataProvider.fetchPropertyData(fullHref).then((data) => {
-      const extractData = getData(data);
+    PropertyDataProvider.fetchPropertyData(fullHref).then(async (data) => {
       const basicStats = getBasicStats(data);
 
-      geoManager.subscribe(id, (geoData) => {
-        rentManager.fetchLocalRent(basicStats.zipCode, basicStats.surface).then(rentEstimate => {
-          // Calculations for simulations
-          const price = basicStats.price || 0;
-          const bedrooms = basicStats.bedrooms || 0;
-          
-          // 1. Classic Rental
-          const classicMonthly = rentEstimate?.estimatedRent || 0;
-          const classicAnnual = classicMonthly * 12;
-          const classicYield = price > 0 ? (classicAnnual / price) * 100 : 0;
+      geoManager.subscribe(id, async (geoData) => {
+        const { coordinates } = geoData;
+        let taxEstimate = null;
+        if (coordinates?.latitude && coordinates?.longitude && basicStats.surface != null) {
+          const taxUrl = `http://localhost:8080/api/tax/estimate?lat=${coordinates.latitude}&lon=${coordinates.longitude}&surface=${basicStats.surface || 65}&type=D`;
+          console.log('[Selopti] Tax API request:', taxUrl);
+          try {
+            const taxRes = await fetch(taxUrl);
+            taxEstimate = await taxRes.json();
+            console.log('[Selopti] Tax API response:', taxEstimate);
+          } catch (e) {
+            console.warn('[Selopti] Tax API unavailable:', e);
+          }
+        } else {
+          console.warn('[Selopti] Tax API skipped — missing coordinates or surface', { coordinates, surface: basicStats.surface });
+        }
 
-          // 2. Colocation Rental
-          // Based on a studio baseline (20m2) with a 0.85 attractive coefficient
-          const rentPerSqm = rentEstimate?.rentPerSqm || 0;
-          const studioBaseline = Math.round(rentPerSqm * 20);
-          const roomPrice = Math.round(studioBaseline * 0.85);
+        const extractData = getData(data, taxEstimate);
+
+        rentManager.fetchLocalRent(basicStats.zipCode).then(rentEstimate => {
+          const COLOC_COEF = 0.75
+          const fraisMensuel = extractData?.priceInfo.map(price => {
+            const nombres = price[1].match(/\d+/g).map(Number);
+            const plusGrand = Math.max(...nombres);
+            const type = price[1].toLowerCase().includes("an") ? "annual" : "monthly";
+            return type === "annual" ? plusGrand / 12 : plusGrand;
+          }).reduce((a, b) => a + b, 0)
+          const bedrooms = basicStats.bedrooms || 0;
+          const classicMonthly = rentEstimate?.rentPerSqm * basicStats.surface || 0;
+          const classicAnnual = classicMonthly * 12;
+          const studioBaseline = Math.round(rentEstimate?.rentPerSqm * 12);
+          const roomPrice = classicMonthly * COLOC_COEF;
           const colocMonthly = roomPrice * bedrooms;
           const colocAnnual = colocMonthly * 12;
-          const colocYield = price > 0 ? (colocAnnual / price) * 100 : 0;
+
+
+
+
+          const propertyPrice = extractData?.price;
+          const downPayment = propertyPrice * 0.20;
+          const loanAmount = propertyPrice * 0.80;
+          const annualRate = 0.04;
+          const monthlyRate = annualRate / 12;
+          const loanDurationYears = 20;
+          const numPayments = loanDurationYears * 12;
+          const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
+          const annualMortgage = monthlyMortgage * 12;
+
+          const classicNetCashflowMonthly = classicMonthly - fraisMensuel - monthlyMortgage;
+          const classicNetCashflowAnnual = classicAnnual - (fraisMensuel * 12) - annualMortgage;
+          const classicRentability = propertyPrice > 0 ? (classicNetCashflowAnnual / propertyPrice) * 100 : 0;
+
+          const simulationsData = {
+            loanDetails: {
+              propertyPrice: propertyPrice,
+              downPayment: downPayment,
+              loanAmount: loanAmount,
+              rate: annualRate,
+              durationYears: loanDurationYears
+            }
+          };
+
+          simulationsData["classic"] = {
+            monthlyRent: classicMonthly,
+            annualRevenue: classicAnnual,
+            monthlyFrais: fraisMensuel,
+            annualFrais: fraisMensuel * 12,
+            monthlyMortgage: monthlyMortgage,
+            annualMortgage: annualMortgage,
+            netCashflowMonthly: classicNetCashflowMonthly,
+            netCashflowAnnual: classicNetCashflowAnnual,
+            rentabilityPercent: classicRentability
+          };
+
+          if (bedrooms > 1) {
+            const colocNetCashflowMonthly = colocMonthly - fraisMensuel - monthlyMortgage;
+            const colocNetCashflowAnnual = colocAnnual - (fraisMensuel * 12) - annualMortgage;
+            const colocRentability = propertyPrice > 0 ? (colocNetCashflowAnnual / propertyPrice) * 100 : 0;
+
+            simulationsData["collocation"] = {
+              roomPrice: roomPrice,
+              monthlyRent: colocMonthly,
+              annualRevenue: colocAnnual,
+              monthlyFrais: fraisMensuel,
+              annualFrais: fraisMensuel * 12,
+              monthlyMortgage: monthlyMortgage,
+              annualMortgage: annualMortgage,
+              netCashflowMonthly: colocNetCashflowMonthly,
+              netCashflowAnnual: colocNetCashflowAnnual,
+              rentabilityPercent: colocRentability,
+              params: {
+                bedrooms: bedrooms,
+                studioBaseline: studioBaseline,
+                coefficient: COLOC_COEF
+              }
+            };
+          }
+
 
           const finalData = {
             ...extractData,
             coordinates: geoData.coordinates,
             georisques: geoData.georisques,
             rentEstimate: rentEstimate,
-            simulations: {
-              classic: {
-                monthlyRent: classicMonthly,
-                annualRevenue: classicAnnual,
-                grossYield: classicYield.toFixed(2) + " %"
-              },
-              colocation: {
-                roomPrice: roomPrice,
-                monthlyRent: colocMonthly,
-                annualRevenue: colocAnnual,
-                grossYield: colocYield.toFixed(2) + " %",
-                params: {
-                  bedrooms: bedrooms,
-                  studioBaseline: studioBaseline,
-                  coefficient: 0.85
-                }
-              }
-            }
+            simulations: simulationsData,
+            taxEstimate: taxEstimate
           };
 
           const html = UIHTMLRenderer.renderDetailsHTML(finalData);

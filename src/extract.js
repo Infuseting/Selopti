@@ -1,3 +1,7 @@
+export function getPrix(object) {
+  return object?.app_cldp?.data?.classified?.sections?.price?.base?.main?.value?.main?.ariaLabel.split(" ")[0];
+}
+
 export function getPriceInfo(object) {
   const result = [];
   const data = object?.app_cldp?.data?.classified?.sections?.price?.components;
@@ -106,10 +110,75 @@ export function getBasicStats(object) {
     zipCode: tracking?.cp ?? location?.zipCode ?? ""
   };
 }
+export function getFallbackPriceInfo(object, priceInfo, taxEstimate) {
+  let priceLabels = priceInfo.map(([label, value]) => label);
+  let description = getDescription(object);
+  if (!priceLabels.includes("Charges de copropriété")) {
+    let extractedCharges = null;
+    let m = description.match(/charges\s+(?:.{0,50}?)annuelles(?:.{0,100}?)?(?:[:\s]|sont\s+de\s+)+([\d\s.,]+)\s*(?:€|euros)/i);
+    if (m) extractedCharges = `${m[1].trim()} €/an`;
+    else {
+      m = description.match(/charges\s+(?:.{0,50}?)mensuelles(?:.{0,100}?)?(?:[:\s]|sont\s+de\s+)+([\d\s.,]+)\s*(?:€|euros)/i);
+      if (m) extractedCharges = `${m[1].trim()} €/mois`;
+      else {
+        m = description.match(/(?:charges.{0,50}?vendeur.*?|charges.{0,50}?s'élèvent.*?)([\d\s.,]+)\s*(?:€|euros)\s*par\s+(mois|an|trimestre)/i);
+        if (m) extractedCharges = `${m[1].trim()} €/${m[2]}`;
+        else {
+          m = description.match(/\+\s*([\d\s.,]+)\s*(?:€|euros)\s*(?:de\s*)?charges/i);
+          if (m) extractedCharges = `${m[1].trim()} €/mois`;
+          else {
+            m = description.match(/loyer.{0,50}?([\d\s.,]+)\s*(?:€|euros).{0,50}?hors\s*charges.{0,50}?([\d\s.,]+)\s*(?:€|euros).{0,50}?charges\s*comprises/i);
+            if (m) {
+              const rent = parseFloat(m[1].replace(/\s/g, '').replace(',', '.'));
+              const cc = parseFloat(m[2].replace(/\s/g, '').replace(',', '.'));
+              extractedCharges = `${(cc - rent).toFixed(2).replace('.', ',')} €/mois`;
+            } else {
+              m = description.match(/charges\s*(?:de\s+copropriété\s*)?[:\-]\s*([\d\s.,]+)\s*(?:€|euros)/i);
+              if (m) extractedCharges = `${m[1].trim()} €/an`;
+            }
+          }
+        }
+      }
+    }
 
-export function getData(object) {
+    if (extractedCharges) {
+      priceInfo.push([
+        "Charges de copropriété",
+        extractedCharges
+      ]);
+    }
+  }
+
+  if (!priceLabels.includes("Estimation de la facture énergétique")) {
+    let m = description.match(/entre\s+([\d\s.,]+)\s*(?:€|euros)?\s*et\s+([\d\s.,]+)\s*(?:€|euros)/i);
+    if (m) {
+      priceInfo.push([
+        "Estimation de la facture énergétique",
+        `entre ${m[1].trim()} et ${m[2].trim()} €/an`
+      ]);
+    }
+  }
+
+  if (!priceLabels.includes("Taxe Foncière")) {
+    let m = description.match(/taxe\s+fonci[eè]re(?:.*?)?[:\s]+([\d\s.,]+)\s*(?:€|euros)/i);
+    if (m) {
+      priceInfo.push(["Taxe Foncière", `${m[1].trim()} €/an`]);
+    } else if (taxEstimate?.estimatedTaxeFonciereMin != null && taxEstimate?.estimatedTaxeFonciereMax != null) {
+      const min = Math.round(taxEstimate.estimatedTaxeFonciereMin);
+      const max = Math.round(taxEstimate.estimatedTaxeFonciereMax);
+      priceInfo.push(["Taxe Foncière", `entre ${min} et ${max} €/an`]);
+    }
+  }
+  console.log("priceInfo", priceInfo)
+  return priceInfo
+}
+
+export function getData(object, taxEstimate = null) {
+  let priceInfo = getPriceInfo(object)
+  priceInfo = getFallbackPriceInfo(object, priceInfo, taxEstimate)
   return {
-    priceInfo: getPriceInfo(object),
+    price: getPrix(object),
+    priceInfo: priceInfo,
     priceRegion: getPriceRegion(object),
     features: getFeatures(object),
     energy: getEnergy(object),

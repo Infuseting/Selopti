@@ -1,25 +1,41 @@
 export class SelogerLinkExtractor {
   static getLink(el, id) {
     if (!el) return null;
-    try { if (el.tagName === 'A' && el.href) return el.href; } catch (e) { }
+    try {
+      if (el.tagName === 'A' && el.href) {
+        const desc = el.querySelector('a[href]');
+        if (desc && desc.title && desc.title.toLowerCase().includes("viager")) return null;
+        return el.href;
+      }
+    } catch (e) { }
 
     try {
       if (el.querySelector) {
         const desc = el.querySelector('a[href]');
+        if (desc && desc.title && desc.title.toLowerCase().includes("viager")) return null;
         if (desc && desc.href) return desc.href;
       }
     } catch (e) { }
 
     let parent = el.parentElement;
     while (parent) {
-      try { if (parent.tagName === 'A' && parent.href) return parent.href; } catch (e) { }
+      try {
+        if (parent.tagName === 'A' && parent.href) {
+          const desc = parent.querySelector('a[href]');
+          if (desc && desc.title && desc.title.toLowerCase().includes("viager")) return null;
+          return parent.href;
+        }
+      } catch (e) { }
       parent = parent.parentElement;
     }
 
     try {
       if (id) {
         const anchors = document.querySelectorAll('a[href*="' + id + '"]');
-        if (anchors && anchors.length) return anchors[0].href;
+        for (const anchor of anchors) {
+          if (anchor && anchor.title && anchor.title.toLowerCase().includes("viager")) continue;
+          if (anchor && anchor.href) return anchor.href;
+        }
       }
     } catch (e) { }
 
@@ -77,6 +93,7 @@ export class DOMScanner {
       this.observedElements.add(element);
       const id = match[1];
       const url = SelogerLinkExtractor.getLink(element, id);
+
       if (url) {
         this.onElementMatched(id, element, url);
       }
