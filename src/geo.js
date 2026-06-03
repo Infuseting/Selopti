@@ -119,8 +119,14 @@ export class GeoDataManager {
     const coordinates = data.coordinates;
     if (!coordinates || !coordinates.latitude || !coordinates.longitude) return;
 
-    const categories = await getGeorisques(coordinates);
-    this.georisquesCache.set(cacheKey, categories);
+    if (!this.georisquesCache.has(cacheKey)) {
+      const fetchPromise = (async () => {
+        return await getGeorisques(coordinates);
+      })();
+      this.georisquesCache.set(cacheKey, fetchPromise);
+    }
+
+    const categories = await this.georisquesCache.get(cacheKey);
 
     for (const [listenerId, listener] of this.listeners) {
       if (listener.data &&

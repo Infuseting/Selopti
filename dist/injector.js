@@ -21,9 +21,43 @@
           console.error("Selopti: Erreur lors de l'analyse du JSON geo", err);
         });
       }
+      const geomMatch = url.match(/geom\?.*?placeId=([^&]+)/);
+      if (geomMatch) {
+        const placeId = geomMatch[1];
+        const clone = response.clone();
+        clone.json().then((data) => {
+          window.dispatchEvent(new CustomEvent("selopti:geom-intercepted", {
+            detail: { placeId, data }
+          }));
+        }).catch((err) => console.error(err));
+      }
+      const rentMatch = url.match(/prices\/rent\/([^/?]+)/);
+      if (rentMatch) {
+        const placeId = rentMatch[1];
+        const clone = response.clone();
+        clone.json().then((data) => {
+          window.dispatchEvent(new CustomEvent("selopti:rent-intercepted", {
+            detail: { placeId, data }
+          }));
+        }).catch((err) => console.error(err));
+      }
     } catch (err) {
       console.error("Selopti: Erreur lors de l'interception de la requ\xEAte", err);
     }
     return response;
   };
+  window.addEventListener("selopti:do-fetch-rent", async (e) => {
+    const zoneId = e.detail;
+    try {
+      const res = await window.fetch(`https://www.seloger.com/serp-bff/map/tile/prices/rent/${zoneId}`);
+      if (!res.ok) {
+        window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
+        return;
+      }
+      const data = await res.json();
+      window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: data }));
+    } catch (err) {
+      window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
+    }
+  });
 })();

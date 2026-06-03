@@ -96,8 +96,13 @@
     async _fetchGeorisques(id, data, cacheKey) {
       const coordinates = data.coordinates;
       if (!coordinates || !coordinates.latitude || !coordinates.longitude) return;
-      const categories = await getGeorisques(coordinates);
-      this.georisquesCache.set(cacheKey, categories);
+      if (!this.georisquesCache.has(cacheKey)) {
+        const fetchPromise = (async () => {
+          return await getGeorisques(coordinates);
+        })();
+        this.georisquesCache.set(cacheKey, fetchPromise);
+      }
+      const categories = await this.georisquesCache.get(cacheKey);
       for (const [listenerId, listener] of this.listeners) {
         if (listener.data && this._getCacheKey(listener.data.coordinates) === cacheKey) {
           listener.callback({ ...listener.data, georisques: categories });
@@ -234,27 +239,38 @@
   }
 
   // src/provider.js
+  var propertyCache = /* @__PURE__ */ new Map();
   var PropertyDataProvider = class {
     /**
      * Fetches and parses the property page data
      * @param {string} url - Property page URL
      * @returns {Promise<Object|null>} JSON data or null on failure
      */
-    static async fetchPropertyData(url) {
-      const result = await fetchUrl(url);
-      if (result.success !== "true") {
-        return null;
+    static fetchPropertyData(url) {
+      if (!propertyCache.has(url)) {
+        const fetchPromise = (async () => {
+          const result = await fetchUrl(url);
+          if (result.success !== "true") {
+            return null;
+          }
+          const text = result.data && result.data[0] ? result.data[0].text : "";
+          const regex = /window\["__UFRN_LIFECYCLE_SERVERREQUEST__"\]=JSON.parse\("(.*)"\)/;
+          const match = text.match(regex);
+          if (!match) return null;
+          const zoneId = /rouen-76000\/([a-zA-Z0-9]+)/;
+          const match2 = text.match(zoneId)[1];
+          if (!match2) return null;
+          try {
+            const data = JSON.parse('"' + match[1] + '"');
+            return { zoneId: match2, data };
+          } catch (err) {
+            console.error("Selopti: Erreur parsing UFRN_LIFECYCLE_SERVERREQUEST", err);
+            return null;
+          }
+        })();
+        propertyCache.set(url, fetchPromise);
       }
-      const text = result.data && result.data[0] ? result.data[0].text : "";
-      const regex = /window\["__UFRN_LIFECYCLE_SERVERREQUEST__"\]=JSON.parse\("(.*)"\)/;
-      const match = text.match(regex);
-      if (!match) return null;
-      try {
-        return JSON.parse(JSON.parse('"' + match[1] + '"'));
-      } catch (err) {
-        console.error("Selopti: Erreur parsing UFRN_LIFECYCLE_SERVERREQUEST", err);
-        return null;
-      }
+      return propertyCache.get(url);
     }
   };
 
@@ -501,12 +517,12 @@
   function getPriceInfo(object) {
     const result = [];
     const data = object?.app_cldp?.data?.classified?.sections?.price?.components;
-    data.forEach((component) => {
+    data?.forEach((component) => {
       if (component.type != "SECONDARY") return result;
-      component?.units[0]?.details[0]?.prices?.forEach((price) => {
+      component?.units?.[0]?.details?.[0]?.prices?.forEach((price) => {
         result.push([
           price?.label?.main,
-          price?.value?.main?.value.replaceAll("\u202F", "")
+          price?.value?.main?.value?.replaceAll("\u202F", "") ?? ""
         ]);
       });
     });
@@ -568,7 +584,7 @@
   }
   function getDescription(object) {
     const data = object?.app_cldp?.data?.classified?.sections?.description?.description;
-    return data.replaceAll("\n", "\\n");
+    return data?.replaceAll("\n", "\\n") ?? "";
   }
   function getTimeMetadata(object) {
     let result = [];
@@ -595,9 +611,10 @@
       zipCode: tracking?.cp ?? location?.zipCode ?? ""
     };
   }
-  function getFallbackPriceInfo(object, priceInfo, taxEstimate) {
+  function getFallbackPriceInfo(object, priceInfo) {
     let priceLabels = priceInfo.map(([label, value]) => label);
     let description = getDescription(object);
+    const taxEstimate = object?.app_cldp?.data?.classified?.sections?.taxEstimate;
     if (!priceLabels.includes("Charges de copropri\xE9t\xE9")) {
       let extractedCharges = null;
       let m = description.match(/charges\s+(?:.{0,50}?)annuelles(?:.{0,100}?)?(?:[:\s]|sont\s+de\s+)+([\d\s.,]+)\s*(?:€|euros)/i);
@@ -651,12 +668,11 @@
         priceInfo.push(["Taxe Fonci\xE8re", `entre ${min} et ${max} \u20AC/an`]);
       }
     }
-    console.log("priceInfo", priceInfo);
     return priceInfo;
   }
-  function getData(object, taxEstimate = null) {
+  function getData(object) {
     let priceInfo = getPriceInfo(object);
-    priceInfo = getFallbackPriceInfo(object, priceInfo, taxEstimate);
+    priceInfo = getFallbackPriceInfo(object, priceInfo);
     return {
       price: getPrix(object),
       priceInfo,
@@ -669,33 +685,8 @@
     };
   }
 
-  // src/rent.js
-  var RentDataManager = class {
-    constructor() {
-      this.apiUrl = "http://localhost:8080/api/rent";
-    }
-    /**
-     * Fetches local rent data for a specific area
-     * @param {string} zipCode - The zip code of the property
-     * @returns {Promise<number|null>} The estimated rent, or null if API is not ready
-     */
-    async fetchLocalRent(zipCode) {
-      if (!zipCode) return null;
-      try {
-        const response = await fetch(`${this.apiUrl}/estimate?zipCode=${zipCode}`);
-        if (response.ok) {
-          return await response.json();
-        }
-        return null;
-      } catch (err) {
-        console.error("[Selopti] Rent API not reachable:", err);
-        return null;
-      }
-    }
-  };
-  var rentManager = new RentDataManager();
-
   // src/engine.js
+  var rentCache = /* @__PURE__ */ new Map();
   var SeloptiEngine = class {
     constructor() {
       this.scanner = new DOMScanner((id, element, url) => this.handleMatchedElement(id, element, url));
@@ -705,105 +696,114 @@
       this.scanner.start(document);
     }
     handleMatchedElement(id, element, fullHref) {
-      PropertyDataProvider.fetchPropertyData(fullHref).then(async (data) => {
+      PropertyDataProvider.fetchPropertyData(fullHref).then(async (result) => {
+        if (!result) return;
+        const { zoneId, data } = result;
         const basicStats = getBasicStats(data);
+        let averageRentM2 = null;
+        if (zoneId) {
+          if (!rentCache.has(zoneId)) {
+            const fetchPromise = new Promise((resolve) => {
+              const handler = (e) => {
+                window.removeEventListener(`selopti:rent-result-${zoneId}`, handler);
+                const rentData = e.detail;
+                if (rentData?.items?.length > 0) {
+                  const item = rentData.items[0];
+                  resolve(item.apartmentPrice?.value || item.housePrice?.value || item.hybridPrice?.value || null);
+                } else {
+                  resolve(null);
+                }
+              };
+              window.addEventListener(`selopti:rent-result-${zoneId}`, handler);
+              window.dispatchEvent(new CustomEvent("selopti:do-fetch-rent", { detail: zoneId }));
+            });
+            rentCache.set(zoneId, fetchPromise);
+          }
+          averageRentM2 = await rentCache.get(zoneId);
+        }
         geoManager.subscribe(id, async (geoData) => {
           const { coordinates } = geoData;
-          let taxEstimate = null;
-          if (coordinates?.latitude && coordinates?.longitude && basicStats.surface != null) {
-            const taxUrl = `http://localhost:8080/api/tax/estimate?lat=${coordinates.latitude}&lon=${coordinates.longitude}&surface=${basicStats.surface || 65}&type=D`;
-            console.log("[Selopti] Tax API request:", taxUrl);
-            try {
-              const taxRes = await fetch(taxUrl);
-              taxEstimate = await taxRes.json();
-              console.log("[Selopti] Tax API response:", taxEstimate);
-            } catch (e) {
-              console.warn("[Selopti] Tax API unavailable:", e);
+          const extractData = getData(data);
+          coordinates.longitude;
+          coordinates.latitude;
+          const COLOC_COEF = 0.75;
+          const fraisMensuel = extractData?.priceInfo.map((price) => {
+            const nombres = price[1].match(/\d+/g).map(Number);
+            const plusGrand = Math.max(...nombres);
+            const type = price[1].toLowerCase().includes("an") ? "annual" : "monthly";
+            return type === "annual" ? plusGrand / 12 : plusGrand;
+          }).reduce((a, b) => a + b, 0);
+          const bedrooms = basicStats.bedrooms || 0;
+          const surface = basicStats.surface || 0;
+          const classicMonthly = averageRentM2 && surface ? averageRentM2 * surface : 0;
+          const classicAnnual = classicMonthly * 12;
+          const studioBaseline = 0;
+          const roomPrice = classicMonthly * COLOC_COEF;
+          const colocMonthly = roomPrice * bedrooms;
+          const colocAnnual = colocMonthly * 12;
+          const propertyPrice = extractData?.price;
+          const downPayment = propertyPrice * 0.2;
+          const loanAmount = propertyPrice * 0.8;
+          const annualRate = 0.04;
+          const monthlyRate = annualRate / 12;
+          const loanDurationYears = 20;
+          const numPayments = loanDurationYears * 12;
+          const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
+          const annualMortgage = monthlyMortgage * 12;
+          const classicNetCashflowMonthly = classicMonthly - fraisMensuel - monthlyMortgage;
+          const classicNetCashflowAnnual = classicAnnual - fraisMensuel * 12 - annualMortgage;
+          const classicRentability = propertyPrice > 0 ? classicNetCashflowAnnual / propertyPrice * 100 : 0;
+          const simulationsData = {
+            loanDetails: {
+              propertyPrice,
+              downPayment,
+              loanAmount,
+              rate: annualRate,
+              durationYears: loanDurationYears
             }
-          } else {
-            console.warn("[Selopti] Tax API skipped \u2014 missing coordinates or surface", { coordinates, surface: basicStats.surface });
-          }
-          const extractData = getData(data, taxEstimate);
-          rentManager.fetchLocalRent(basicStats.zipCode).then((rentEstimate) => {
-            const COLOC_COEF = 0.75;
-            const fraisMensuel = extractData?.priceInfo.map((price) => {
-              const nombres = price[1].match(/\d+/g).map(Number);
-              const plusGrand = Math.max(...nombres);
-              const type = price[1].toLowerCase().includes("an") ? "annual" : "monthly";
-              return type === "annual" ? plusGrand / 12 : plusGrand;
-            }).reduce((a, b) => a + b, 0);
-            const bedrooms = basicStats.bedrooms || 0;
-            const classicMonthly = rentEstimate?.rentPerSqm * basicStats.surface || 0;
-            const classicAnnual = classicMonthly * 12;
-            const studioBaseline = Math.round(rentEstimate?.rentPerSqm * 12);
-            const roomPrice = classicMonthly * COLOC_COEF;
-            const colocMonthly = roomPrice * bedrooms;
-            const colocAnnual = colocMonthly * 12;
-            const propertyPrice = extractData?.price;
-            const downPayment = propertyPrice * 0.2;
-            const loanAmount = propertyPrice * 0.8;
-            const annualRate = 0.04;
-            const monthlyRate = annualRate / 12;
-            const loanDurationYears = 20;
-            const numPayments = loanDurationYears * 12;
-            const monthlyMortgage = loanAmount > 0 ? loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 0;
-            const annualMortgage = monthlyMortgage * 12;
-            const classicNetCashflowMonthly = classicMonthly - fraisMensuel - monthlyMortgage;
-            const classicNetCashflowAnnual = classicAnnual - fraisMensuel * 12 - annualMortgage;
-            const classicRentability = propertyPrice > 0 ? classicNetCashflowAnnual / propertyPrice * 100 : 0;
-            const simulationsData = {
-              loanDetails: {
-                propertyPrice,
-                downPayment,
-                loanAmount,
-                rate: annualRate,
-                durationYears: loanDurationYears
-              }
-            };
-            simulationsData["classic"] = {
-              monthlyRent: classicMonthly,
-              annualRevenue: classicAnnual,
+          };
+          simulationsData["classic"] = {
+            monthlyRent: classicMonthly,
+            annualRevenue: classicAnnual,
+            monthlyFrais: fraisMensuel,
+            annualFrais: fraisMensuel * 12,
+            monthlyMortgage,
+            annualMortgage,
+            netCashflowMonthly: classicNetCashflowMonthly,
+            netCashflowAnnual: classicNetCashflowAnnual,
+            rentabilityPercent: classicRentability
+          };
+          if (bedrooms > 1) {
+            const colocNetCashflowMonthly = colocMonthly - fraisMensuel - monthlyMortgage;
+            const colocNetCashflowAnnual = colocAnnual - fraisMensuel * 12 - annualMortgage;
+            const colocRentability = propertyPrice > 0 ? colocNetCashflowAnnual / propertyPrice * 100 : 0;
+            simulationsData["collocation"] = {
+              roomPrice,
+              monthlyRent: colocMonthly,
+              annualRevenue: colocAnnual,
               monthlyFrais: fraisMensuel,
               annualFrais: fraisMensuel * 12,
               monthlyMortgage,
               annualMortgage,
-              netCashflowMonthly: classicNetCashflowMonthly,
-              netCashflowAnnual: classicNetCashflowAnnual,
-              rentabilityPercent: classicRentability
+              netCashflowMonthly: colocNetCashflowMonthly,
+              netCashflowAnnual: colocNetCashflowAnnual,
+              rentabilityPercent: colocRentability,
+              params: {
+                bedrooms,
+                studioBaseline,
+                coefficient: COLOC_COEF
+              }
             };
-            if (bedrooms > 1) {
-              const colocNetCashflowMonthly = colocMonthly - fraisMensuel - monthlyMortgage;
-              const colocNetCashflowAnnual = colocAnnual - fraisMensuel * 12 - annualMortgage;
-              const colocRentability = propertyPrice > 0 ? colocNetCashflowAnnual / propertyPrice * 100 : 0;
-              simulationsData["collocation"] = {
-                roomPrice,
-                monthlyRent: colocMonthly,
-                annualRevenue: colocAnnual,
-                monthlyFrais: fraisMensuel,
-                annualFrais: fraisMensuel * 12,
-                monthlyMortgage,
-                annualMortgage,
-                netCashflowMonthly: colocNetCashflowMonthly,
-                netCashflowAnnual: colocNetCashflowAnnual,
-                rentabilityPercent: colocRentability,
-                params: {
-                  bedrooms,
-                  studioBaseline,
-                  coefficient: COLOC_COEF
-                }
-              };
-            }
-            const finalData = {
-              ...extractData,
-              coordinates: geoData.coordinates,
-              georisques: geoData.georisques,
-              rentEstimate,
-              simulations: simulationsData,
-              taxEstimate
-            };
-            const html = UIHTMLRenderer.renderDetailsHTML(finalData);
-            this.inserter.insertHTML(id, element, html);
-          });
+          }
+          const finalData = {
+            ...extractData,
+            coordinates: geoData.coordinates,
+            georisques: geoData.georisques,
+            averageRentM2,
+            simulations: simulationsData
+          };
+          const html = UIHTMLRenderer.renderDetailsHTML(finalData);
+          this.inserter.insertHTML(id, element, html);
         });
       });
     }

@@ -5,12 +5,12 @@ export function getPrix(object) {
 export function getPriceInfo(object) {
   const result = [];
   const data = object?.app_cldp?.data?.classified?.sections?.price?.components;
-  data.forEach((component) => {
+  data?.forEach((component) => {
     if (component.type != "SECONDARY") return result;
-    component?.units[0]?.details[0]?.prices?.forEach((price) => {
+    component?.units?.[0]?.details?.[0]?.prices?.forEach((price) => {
       result.push([
         price?.label?.main,
-        price?.value?.main?.value.replaceAll(" ", "")
+        price?.value?.main?.value?.replaceAll(" ", "") ?? ""
       ])
     })
   })
@@ -79,8 +79,7 @@ export function getEnergy(object) {
 
 export function getDescription(object) {
   const data = object?.app_cldp?.data?.classified?.sections?.description?.description;
-  return data.replaceAll("\n", "\\n");
-
+  return data?.replaceAll("\n", "\\n") ?? "";
 }
 
 export function getTimeMetadata(object) {
@@ -110,9 +109,10 @@ export function getBasicStats(object) {
     zipCode: tracking?.cp ?? location?.zipCode ?? ""
   };
 }
-export function getFallbackPriceInfo(object, priceInfo, taxEstimate) {
+export function getFallbackPriceInfo(object, priceInfo) {
   let priceLabels = priceInfo.map(([label, value]) => label);
   let description = getDescription(object);
+  const taxEstimate = object?.app_cldp?.data?.classified?.sections?.taxEstimate;
   if (!priceLabels.includes("Charges de copropriété")) {
     let extractedCharges = null;
     let m = description.match(/charges\s+(?:.{0,50}?)annuelles(?:.{0,100}?)?(?:[:\s]|sont\s+de\s+)+([\d\s.,]+)\s*(?:€|euros)/i);
@@ -169,13 +169,12 @@ export function getFallbackPriceInfo(object, priceInfo, taxEstimate) {
       priceInfo.push(["Taxe Foncière", `entre ${min} et ${max} €/an`]);
     }
   }
-  console.log("priceInfo", priceInfo)
   return priceInfo
 }
 
-export function getData(object, taxEstimate = null) {
+export function getData(object) {
   let priceInfo = getPriceInfo(object)
-  priceInfo = getFallbackPriceInfo(object, priceInfo, taxEstimate)
+  priceInfo = getFallbackPriceInfo(object, priceInfo)
   return {
     price: getPrix(object),
     priceInfo: priceInfo,
