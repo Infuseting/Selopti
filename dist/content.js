@@ -258,10 +258,11 @@
           const match = text.match(regex);
           if (!match) return null;
           const zoneId = /rouen-76000\/([a-zA-Z0-9]+)/;
-          const match2 = text.match(zoneId)[1];
+          const match2 = text.match(zoneId)[1].toLocaleUpperCase();
           if (!match2) return null;
           try {
-            const data = JSON.parse('"' + match[1] + '"');
+            const unescapedString = JSON.parse('"' + match[1] + '"');
+            const data = JSON.parse(unescapedString);
             return { zoneId: match2, data };
           } catch (err) {
             console.error("Selopti: Erreur parsing UFRN_LIFECYCLE_SERVERREQUEST", err);
@@ -512,7 +513,9 @@
 
   // src/extract.js
   function getPrix(object) {
-    return object?.app_cldp?.data?.classified?.sections?.price?.base?.main?.value?.main?.ariaLabel.split(" ")[0];
+    const label = object?.app_cldp?.data?.classified?.sections?.price?.base?.main?.value?.main?.ariaLabel;
+    if (!label) return 0;
+    return Number(label.replace(/\D/g, ""));
   }
   function getPriceInfo(object) {
     const result = [];
@@ -696,15 +699,21 @@
       this.scanner.start(document);
     }
     handleMatchedElement(id, element, fullHref) {
+      console.log("Selopti: handleMatchedElement called for", fullHref);
       PropertyDataProvider.fetchPropertyData(fullHref).then(async (result) => {
+        console.log("Selopti: fetchPropertyData result", result);
         if (!result) return;
         const { zoneId, data } = result;
         const basicStats = getBasicStats(data);
         let averageRentM2 = null;
         if (zoneId) {
+          console.log("Selopti: engine.js: zoneId is present:", zoneId);
           if (!rentCache.has(zoneId)) {
+            console.log("Selopti: engine.js: zoneId not in cache, creating promise");
             const fetchPromise = new Promise((resolve) => {
+              console.log("Selopti: engine.js: Promise executing for zoneId:", zoneId);
               const handler = (e) => {
+                console.log("Selopti: engine.js: rent-result handler triggered for zoneId", zoneId);
                 window.removeEventListener(`selopti:rent-result-${zoneId}`, handler);
                 const rentData = e.detail;
                 if (rentData?.items?.length > 0) {
@@ -715,11 +724,16 @@
                 }
               };
               window.addEventListener(`selopti:rent-result-${zoneId}`, handler);
+              console.log("Selopti: engine.js: dispatching selopti:do-fetch-rent event");
               window.dispatchEvent(new CustomEvent("selopti:do-fetch-rent", { detail: zoneId }));
             });
             rentCache.set(zoneId, fetchPromise);
           }
+          console.log("Selopti: engine.js: awaiting averageRentM2");
           averageRentM2 = await rentCache.get(zoneId);
+          console.log("Selopti: engine.js: averageRentM2 is", averageRentM2);
+        } else {
+          console.log("Selopti: engine.js: NO zoneId for this element");
         }
         geoManager.subscribe(id, async (geoData) => {
           const { coordinates } = geoData;
@@ -820,12 +834,15 @@
     }));
   });
   var engine = new SeloptiEngine();
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("distributionTypes") === "Buy") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => {
+        engine.init();
+      });
+    } else {
       engine.init();
-    });
-  } else {
-    engine.init();
+    }
   }
   window.seloptiInserter = engine.inserter;
 })();

@@ -21,11 +21,13 @@ export class PropertyDataProvider {
         const match = text.match(regex);
         if (!match) return null;
         const zoneId = /rouen-76000\/([a-zA-Z0-9]+)/;
-        const match2 = text.match(zoneId)[1];
+        const match2 = text.match(zoneId)[1].toLocaleUpperCase();
         if (!match2) return null;
 
+
         try {
-          const data = JSON.parse('"' + match[1] + '"');
+          const unescapedString = JSON.parse('"' + match[1] + '"');
+          const data = JSON.parse(unescapedString);
           return { zoneId: match2, data };
         } catch (err) {
           console.error("Selopti: Erreur parsing UFRN_LIFECYCLE_SERVERREQUEST", err);

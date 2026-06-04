@@ -1,6 +1,6 @@
 const originalFetch = window.fetch;
 
-window.fetch = async function(...args) {
+window.fetch = async function (...args) {
   const response = await originalFetch.apply(this, args);
 
   try {
@@ -54,16 +54,21 @@ window.fetch = async function(...args) {
 
 // Écoute des demandes de fetch depuis le content script (pour utiliser le fetch natif avec Datadome)
 window.addEventListener('selopti:do-fetch-rent', async (e) => {
+  console.log("Selopti: Event selopti:do-fetch-rent fired", e);
   const zoneId = e.detail;
   try {
-    const res = await window.fetch(`https://www.seloger.com/serp-bff/map/tile/prices/rent/${zoneId}`);
+    console.log(zoneId.toUpperCase())
+    const res = await window.fetch(`https://www.seloger.com/serp-bff/map/tile/prices/rent/${zoneId.toUpperCase()}`);
+    console.log(res);
     if (!res.ok) {
       window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
       return;
     }
     const data = await res.json();
+    console.log(data);
     window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: data }));
   } catch (err) {
+    console.error("Selopti: Error fetching rent for zoneId", zoneId, err);
     window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
   }
 });

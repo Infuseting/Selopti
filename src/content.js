@@ -11,7 +11,7 @@ injectorScript.type = 'text/javascript';
 
 // 2. Écouter les événements geo interceptés
 window.addEventListener('selopti:geo-intercepted', (event) => {
-  
+
   // Passer les données à l'engine via un event custom
   window.dispatchEvent(new CustomEvent('selopti:geo-data', {
     detail: event.detail
@@ -23,13 +23,16 @@ import './geo.js'; // S'assure que le manager geo écoute les événements de l'
 import { SeloptiEngine } from './engine.js';
 
 const engine = new SeloptiEngine();
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("distributionTypes") === "Buy") {
+  if (document.readyState === 'loading') {
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
+      engine.init();
+    });
+  } else {
     engine.init();
-  });
-} else {
-  engine.init();
+  }
 }
 
 window.seloptiInserter = engine.inserter;

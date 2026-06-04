@@ -18,17 +18,23 @@ export class SeloptiEngine {
   }
 
   handleMatchedElement(id, element, fullHref) {
+    console.log("Selopti: handleMatchedElement called for", fullHref);
     PropertyDataProvider.fetchPropertyData(fullHref).then(async (result) => {
+      console.log("Selopti: fetchPropertyData result", result);
       if (!result) return;
       const { zoneId, data } = result;
       const basicStats = getBasicStats(data);
 
       let averageRentM2 = null;
       if (zoneId) {
+        console.log("Selopti: engine.js: zoneId is present:", zoneId);
         if (!rentCache.has(zoneId)) {
+          console.log("Selopti: engine.js: zoneId not in cache, creating promise");
           // On stocke directement la Promesse. Toutes les autres exécutions vont "attendre" cette même promesse.
           const fetchPromise = new Promise((resolve) => {
+            console.log("Selopti: engine.js: Promise executing for zoneId:", zoneId);
             const handler = (e) => {
+              console.log("Selopti: engine.js: rent-result handler triggered for zoneId", zoneId);
               window.removeEventListener(`selopti:rent-result-${zoneId}`, handler);
               const rentData = e.detail;
               if (rentData?.items?.length > 0) {
@@ -39,12 +45,17 @@ export class SeloptiEngine {
               }
             };
             window.addEventListener(`selopti:rent-result-${zoneId}`, handler);
+            console.log("Selopti: engine.js: dispatching selopti:do-fetch-rent event");
             window.dispatchEvent(new CustomEvent('selopti:do-fetch-rent', { detail: zoneId }));
           });
           rentCache.set(zoneId, fetchPromise);
         }
         // Si 10 requêtes partent en même temps, les 9 suivantes feront simplement un await sur la promesse de la 1ère !
+        console.log("Selopti: engine.js: awaiting averageRentM2");
         averageRentM2 = await rentCache.get(zoneId);
+        console.log("Selopti: engine.js: averageRentM2 is", averageRentM2);
+      } else {
+        console.log("Selopti: engine.js: NO zoneId for this element");
       }
 
       geoManager.subscribe(id, async (geoData) => {

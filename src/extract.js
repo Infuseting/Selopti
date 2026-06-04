@@ -1,5 +1,7 @@
 export function getPrix(object) {
-  return object?.app_cldp?.data?.classified?.sections?.price?.base?.main?.value?.main?.ariaLabel.split(" ")[0];
+  const label = object?.app_cldp?.data?.classified?.sections?.price?.base?.main?.value?.main?.ariaLabel;
+  if (!label) return 0;
+  return Number(label.replace(/\D/g, ''));
 }
 
 export function getPriceInfo(object) {
