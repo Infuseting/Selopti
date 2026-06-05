@@ -146,10 +146,7 @@ export class UIHTMLRenderer {
           <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Paramètres de calcul :</h5>
           <ul style="margin: 0 0 12px 0; padding-left: 20px;">
             <li><strong>Prix affiché (page) :</strong> ${formatCurr(data.simulations.loanDetails.propertyPrice)}
-              ${data.simulations.loanDetails.trackingPrice && data.simulations.loanDetails.trackingPrice !== data.simulations.loanDetails.propertyPrice
-                ? `<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;" title="Prix tracking analytics Seloger — peut inclure honoraires ou être arrondi">⚠ tracking: ${formatCurr(data.simulations.loanDetails.trackingPrice)}</span>`
-                : ''
-              }
+              
             </li>
             <li><strong>Apport (20%) :</strong> ${formatCurr(data.simulations.loanDetails.downPayment)}</li>
             <li><strong>Montant du prêt :</strong> ${formatCurr(data.simulations.loanDetails.loanAmount)}</li>

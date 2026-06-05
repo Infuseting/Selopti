@@ -414,7 +414,7 @@
           <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Param\xE8tres de calcul :</h5>
           <ul style="margin: 0 0 12px 0; padding-left: 20px;">
             <li><strong>Prix affich\xE9 (page) :</strong> ${formatCurr(data.simulations.loanDetails.propertyPrice)}
-              ${data.simulations.loanDetails.trackingPrice && data.simulations.loanDetails.trackingPrice !== data.simulations.loanDetails.propertyPrice ? `<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;" title="Prix tracking analytics Seloger \u2014 peut inclure honoraires ou \xEAtre arrondi">\u26A0 tracking: ${formatCurr(data.simulations.loanDetails.trackingPrice)}</span>` : ""}
+              
             </li>
             <li><strong>Apport (20%) :</strong> ${formatCurr(data.simulations.loanDetails.downPayment)}</li>
             <li><strong>Montant du pr\xEAt :</strong> ${formatCurr(data.simulations.loanDetails.loanAmount)}</li>
