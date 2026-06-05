@@ -44,7 +44,9 @@ export class UIHTMLRenderer {
       });
     }
 
-    return `
+    return `<pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${this.escapeHTML(JSON.stringify(data, null, 2))}</pre>`;
+
+    /*return `
       <div class="selopti-container" style="font-family: 'Inter', system-ui, sans-serif; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(0,0,0,0.05); color: #1e293b; transition: transform 0.2s ease, box-shadow 0.2s ease; width: 100%; box-sizing: border-box;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
           <div style="display: flex; align-items: center;">
@@ -159,8 +161,8 @@ export class UIHTMLRenderer {
           ` : ''}
         </div>
         
-      </div>
-    `;
+      </div> 
+    `; */
   }
 
   static formatGeorisques(georisques) {
