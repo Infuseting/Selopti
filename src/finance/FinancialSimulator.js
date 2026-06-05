@@ -61,10 +61,15 @@ export class FinancialSimulator {
 
     // ── Colocation (only applicable with 2+ bedrooms) ───────────────────────
     if (bedrooms > 1) {
-      const privateM2PerRoom = this._computePrivateM2PerRoom(surface, bedrooms);
-      const colocMonthlyRent = this._computeColocMonthly(privateM2PerRoom, bedrooms, averageRentM2);
-      const roomPrice = bedrooms > 0 ? colocMonthlyRent / bedrooms : 0;
-      const { commonAreaM2, roomPremium } = this._colocConfig;
+      const privateM2PerRoom = this._computePrivateM2PerRoom();
+      const commonAreaM2 = this._computeCommonAreaM2(surface, bedrooms, privateM2PerRoom);
+      const roomPrice = this._computeRoomPrice({
+        privateM2PerRoom,
+        commonAreaM2,
+        averageRentM2,
+      });
+      const colocMonthlyRent = this._computeColocMonthly(roomPrice, bedrooms);
+      const { appartCoef } = this._colocConfig;
 
       simulationsData.collocation = {
         roomPrice,
@@ -76,9 +81,9 @@ export class FinancialSimulator {
         }),
         params: {
           bedrooms,
-          privateM2PerRoom: Math.round(privateM2PerRoom * 10) / 10,
+          privateM2PerRoom,
           commonAreaM2,
-          roomPremium,
+          appartCoef,
         },
       };
     }
@@ -118,16 +123,26 @@ export class FinancialSimulator {
   }
 
   /** @private */
-  _computePrivateM2PerRoom(surface, bedrooms) {
-    const { commonAreaM2, minRoomM2 } = this._colocConfig;
-    return bedrooms > 0
-      ? Math.max(minRoomM2, (surface - commonAreaM2) / bedrooms)
-      : 0;
+  _computePrivateM2PerRoom() {
+    return this._colocConfig.roomSizeM2;
   }
 
   /** @private */
-  _computeColocMonthly(privateM2PerRoom, bedrooms, averageRentM2) {
+  _computeCommonAreaM2(surface, bedrooms, privateM2PerRoom) {
+    if (!surface || bedrooms <= 0 || privateM2PerRoom <= 0) return 0;
+    return Math.max(0, surface - bedrooms * privateM2PerRoom);
+  }
+
+  /** @private */
+  _computeRoomPrice({ privateM2PerRoom, commonAreaM2, averageRentM2 }) {
     if (!averageRentM2 || privateM2PerRoom <= 0) return 0;
-    return privateM2PerRoom * averageRentM2 * this._colocConfig.roomPremium * bedrooms;
+    return (privateM2PerRoom * averageRentM2)
+      + (commonAreaM2 * averageRentM2 * this._colocConfig.appartCoef);
+  }
+
+  /** @private */
+  _computeColocMonthly(roomPrice, bedrooms) {
+    if (roomPrice <= 0 || bedrooms <= 0) return 0;
+    return roomPrice * bedrooms;
   }
 }

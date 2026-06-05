@@ -3,6 +3,9 @@ export class UIHTMLRenderer {
     const classic = data.simulations?.classic;
     const coloc = data.simulations?.collocation;
     const rentEst = data.rentEstimate;
+    const priceHistory = Array.isArray(data.priceHistory?.history)
+      ? data.priceHistory.history
+      : [];
 
     if (!classic) return '';
 
@@ -90,6 +93,8 @@ export class UIHTMLRenderer {
             <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${data.simulations.loanDetails.durationYears} ans @ ${formatPct(data.simulations.loanDetails.rate * 100)}</div>
           </div>
         </div>
+
+        ${this.renderPriceTrend(priceHistory, formatCurr)}
 
         <!-- Classic Scenario -->
         <div style="margin-bottom: ${coloc ? '20px' : '0'}; background: #ffffff; border-radius: 12px; border: 1px solid #f1f5f9; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
@@ -204,6 +209,81 @@ export class UIHTMLRenderer {
     }
     html += '</div>';
     return html;
+  }
+
+  static renderPriceTrend(history, formatCurr) {
+    if (!Array.isArray(history) || history.length === 0) return '';
+
+    const points = history
+      .filter((item) => Number.isFinite(Number(item?.price)) && Number(item?.price) > 0)
+      .slice(-24)
+      .map((item) => ({
+        price: Number(item.price),
+        capturedAt: item?.capturedAt ?? null,
+      }));
+
+    if (points.length === 0) return '';
+
+    const first = points[0].price;
+    const last = points.at(-1).price;
+    const delta = last - first;
+    const deltaPct = first > 0 ? (delta / first) * 100 : 0;
+    const trendColor = delta >= 0 ? '#16a34a' : '#dc2626';
+
+    return `
+      <div style="margin-bottom: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+          <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #334155;">Evolution du prix</h4>
+          <div style="font-size: 12px; color: #64748b;">${points.length} points</div>
+        </div>
+        ${this._buildSparkline(points)}
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="font-size: 13px; color: #334155;">
+            Dernier prix: <strong>${formatCurr(last)}</strong>
+          </div>
+          <div style="font-size: 13px; color: ${trendColor}; font-weight: 700;">
+            ${delta >= 0 ? '+' : ''}${formatCurr(delta)} (${delta >= 0 ? '+' : ''}${deltaPct.toFixed(2)}%)
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  static _buildSparkline(points) {
+    const width = 560;
+    const height = 120;
+    const min = Math.min(...points.map((p) => p.price));
+    const max = Math.max(...points.map((p) => p.price));
+    const range = Math.max(1, max - min);
+    const stepX = points.length > 1 ? width / (points.length - 1) : width;
+
+    const coords = points.map((point, idx) => {
+      const x = idx * stepX;
+      const y = height - ((point.price - min) / range) * height;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    });
+    const lineCoords = points.length === 1
+      ? `0,${(height / 2).toFixed(2)} ${width},${(height / 2).toFixed(2)}`
+      : coords.join(' ');
+
+    const firstLabel = points[0]?.capturedAt
+      ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(new Date(points[0].capturedAt))
+      : 'Debut';
+    const lastLabel = points[points.length - 1]?.capturedAt
+      ? new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(new Date(points[points.length - 1].capturedAt))
+      : 'Maintenant';
+
+    return `
+      <div style="background: linear-gradient(180deg, #f8fafc, #ffffff); border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px;">
+        <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="width: 100%; height: 120px; display: block;">
+          <polyline fill="none" stroke="#2563eb" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="${lineCoords}"></polyline>
+        </svg>
+        <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #94a3b8; font-size: 11px;">
+          <span>${firstLabel}</span>
+          <span>${lastLabel}</span>
+        </div>
+      </div>
+    `;
   }
 
   static escapeHTML(value) {

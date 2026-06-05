@@ -96,3 +96,41 @@ window.addEventListener('selopti:do-fetch-rent', async (e) => {
     window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
   }
 });
+
+window.addEventListener('selopti:do-track-price', async (e) => {
+  const detail = e?.detail ?? {};
+  const requestId = detail.requestId;
+  const endpoint = detail.endpoint;
+  const payload = detail.payload;
+
+  if (!requestId || !endpoint || !payload) return;
+
+  const resultEventName = `selopti:price-track-result-${requestId}`;
+
+  try {
+    const res = await window.fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      window.dispatchEvent(new CustomEvent(resultEventName, {
+        detail: { success: false, status: res.status },
+      }));
+      return;
+    }
+
+    const data = await res.json();
+    window.dispatchEvent(new CustomEvent(resultEventName, {
+      detail: { success: true, data },
+    }));
+  } catch (err) {
+    console.error('Selopti: price tracking failed', err);
+    window.dispatchEvent(new CustomEvent(resultEventName, {
+      detail: { success: false, error: String(err) },
+    }));
+  }
+});

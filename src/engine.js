@@ -6,6 +6,7 @@ import { SeloptiInserter } from './insert.js';
 import { getData, getBasicStats } from './extract.js';
 import { seloptiExport } from './export.js';
 import { RentService } from './services/RentService.js';
+import { PriceHistoryService } from './services/PriceHistoryService.js';
 import { ChargesParser } from './finance/ChargesParser.js';
 import { MortgageCalculator } from './finance/MortgageCalculator.js';
 import { FinancialSimulator } from './finance/FinancialSimulator.js';
@@ -25,6 +26,7 @@ export class SeloptiEngine {
    * @param {DOMScanner}          [deps.scanner]
    * @param {SeloptiInserter}     [deps.inserter]
    * @param {RentService}         [deps.rentService]
+   * @param {PriceHistoryService} [deps.priceHistoryService]
    * @param {ChargesParser}       [deps.chargesParser]
    * @param {FinancialSimulator}  [deps.simulator]
    */
@@ -32,11 +34,13 @@ export class SeloptiEngine {
     scanner,
     inserter,
     rentService,
+    priceHistoryService,
     chargesParser,
     simulator,
   } = {}) {
     this.inserter = inserter ?? new SeloptiInserter();
     this._rentService = rentService ?? new RentService();
+    this._priceHistoryService = priceHistoryService ?? new PriceHistoryService();
     this._chargesParser = chargesParser ?? new ChargesParser();
     this._simulator = simulator ?? new FinancialSimulator(new MortgageCalculator());
     this.scanner = scanner ?? new DOMScanner(
@@ -63,12 +67,15 @@ export class SeloptiEngine {
     });
   }
 
-  _renderProperty({ id, element, fullHref, zoneId, data, basicStats, averageRentM2, geoData }) {
+  async _renderProperty({ id, element, fullHref, zoneId, data, basicStats, averageRentM2, geoData }) {
     const extractData = getData(data);
     const monthlyCharges = this._chargesParser.parseMonthly(extractData?.priceInfo);
+    const propertyPrice = extractData?.price || basicStats?.price || 0;
+
+    const priceHistory = await this._priceHistoryService.track(fullHref, propertyPrice);
 
     const simulationsData = this._simulator.simulate({
-      propertyPrice: extractData?.price || basicStats?.price || 0,
+      propertyPrice,
       trackingPrice: basicStats?.price || 0,
       surface: basicStats.surface || 0,
       bedrooms: basicStats.bedrooms || 0,
@@ -82,6 +89,7 @@ export class SeloptiEngine {
       georisques: geoData.georisques,
       averageRentM2,
       simulations: simulationsData,
+      priceHistory,
     };
 
     seloptiExport.save({
@@ -92,6 +100,7 @@ export class SeloptiEngine {
       averageRentM2,
       geoData,
       simulations: simulationsData,
+      priceHistory,
     });
 
     const html = UIHTMLRenderer.renderDetailsHTML(finalData, averageRentM2);
