@@ -277,7 +277,7 @@
 
   // src/ui.js
   var UIHTMLRenderer = class {
-    static renderDetailsHTML(data) {
+    static renderDetailsHTML(data, averageRentM2) {
       const classic = data.simulations?.classic;
       const coloc = data.simulations?.collocation;
       const rentEst = data.rentEstimate;
@@ -314,7 +314,134 @@
           if (label === "Date de mise \xE0 jour") updatedInfo = formatDateInfo(value);
         });
       }
-      return `<pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${this.escapeHTML(JSON.stringify(data, null, 2))}</pre>`;
+      return `
+      <div class="selopti-container" style="font-family: 'Inter', system-ui, sans-serif; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(0,0,0,0.05); color: #1e293b; transition: transform 0.2s ease, box-shadow 0.2s ease; width: 100%; box-sizing: border-box;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center;">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <h3 style="margin: 0; font-size: 20px; font-weight: 700; background: linear-gradient(to right, #1e293b, #334155); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Selopti Insights</h3>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+            ${createdInfo.dateStr !== "N/A" ? `
+            <span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; line-height: 1;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              Publi\xE9 : ${createdInfo.dateStr} <span style="font-weight: 400; opacity: 0.8;">${createdInfo.daysAgoStr}</span>
+            </span>` : ""}
+            ${updatedInfo.dateStr !== "N/A" && updatedInfo.dateStr !== createdInfo.dateStr ? `
+            <span style="background: #fffbeb; color: #b45309; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; border: 1px solid #fde68a; line-height: 1;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 21v-5h5"></path></svg>
+              M\xE0J : ${updatedInfo.dateStr} <span style="font-weight: 400; opacity: 0.8;">${updatedInfo.daysAgoStr}</span>
+            </span>` : ""}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden; min-width: 0;">
+            <div style="position: absolute; top: 0; right: 0; width: 40px; height: 40px; background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.1) 50%);"></div>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              Loyer Est.
+            </span>
+            <div style="font-size: 22px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyRent)} <span style="font-size: 13px; font-weight: 500; color: #64748b;">/m</span></div>
+            ${rentEst && rentEst.rentPerSqm ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Ref: ${formatCurr(rentEst.rentPerSqm)}/m\xB2</div>` : ""}
+          </div>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden; min-width: 0;">
+            <div style="position: absolute; top: 0; right: 0; width: 40px; height: 40px; background: linear-gradient(135deg, transparent 50%, rgba(239, 68, 68, 0.1) 50%);"></div>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+              Mensualit\xE9 Pr\xEAt
+            </span>
+            <div style="font-size: 22px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyMortgage)} <span style="font-size: 13px; font-weight: 500; color: #64748b;">/m</span></div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${data.simulations.loanDetails.durationYears} ans @ ${formatPct(data.simulations.loanDetails.rate * 100)}</div>
+          </div>
+        </div>
+
+        <!-- Classic Scenario -->
+        <div style="margin-bottom: ${coloc ? "20px" : "0"}; background: #ffffff; border-radius: 12px; border: 1px solid #f1f5f9; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+              Location Classique
+            </h4>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: ${classic.netCashflowMonthly >= 0 ? "#ecfdf5" : "#fef2f2"}; border: 1px solid ${classic.netCashflowMonthly >= 0 ? "#a7f3d0" : "#fecaca"};">
+              <div style="font-size: 12px; color: ${classic.netCashflowMonthly >= 0 ? "#059669" : "#dc2626"}; font-weight: 600;">Cashflow Net mensuel</div>
+              <div style="font-size: 16px; font-weight: 800; color: ${classic.netCashflowMonthly >= 0 ? "#065f46" : "#991b1b"};">${formatCurr(classic.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe;">
+              <div style="font-size: 12px; color: #2563eb; font-weight: 600;">Rentabilit\xE9 Brute</div>
+              <div style="font-size: 16px; font-weight: 800; color: #1e3a8a;">${formatPct(classic.rentabilityBrute)}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+              <div style="font-size: 12px; color: #16a34a; font-weight: 600;">Rentabilit\xE9 Nette charges</div>
+              <div style="font-size: 16px; font-weight: 800; color: #14532d;">${formatPct(classic.rentabilityNette)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coloc Scenario -->
+        ${coloc ? `
+        <div style="background: #ffffff; border-radius: 12px; border: 1px solid #f1f5f9; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              Colocation (${coloc.params.bedrooms} ch.)
+            </h4>
+            <span style="font-size: 12px; font-weight: 600; color: #8b5cf6; background: #ede9fe; padding: 2px 8px; border-radius: 10px;">${formatCurr(coloc.roomPrice)}/ch \xB7 ${coloc.params.privateM2PerRoom}m\xB2</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: ${coloc.netCashflowMonthly >= 0 ? "#ecfdf5" : "#fef2f2"}; border: 1px solid ${coloc.netCashflowMonthly >= 0 ? "#a7f3d0" : "#fecaca"};">
+              <div style="font-size: 12px; color: ${coloc.netCashflowMonthly >= 0 ? "#059669" : "#dc2626"}; font-weight: 600;">Cashflow Net mensuel</div>
+              <div style="font-size: 16px; font-weight: 800; color: ${coloc.netCashflowMonthly >= 0 ? "#065f46" : "#991b1b"};">${formatCurr(coloc.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #faf5ff; border: 1px solid #e9d5ff;">
+              <div style="font-size: 12px; color: #9333ea; font-weight: 600;">Rentabilit\xE9 Brute</div>
+              <div style="font-size: 16px; font-weight: 800; color: #581c87;">${formatPct(coloc.rentabilityBrute)}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #f5f3ff; border: 1px solid #ddd6fe;">
+              <div style="font-size: 12px; color: #7c3aed; font-weight: 600;">Rentabilit\xE9 Nette charges</div>
+              <div style="font-size: 16px; font-weight: 800; color: #4c1d95;">${formatPct(coloc.rentabilityNette)}</div>
+            </div>
+          </div>
+        </div>
+        ` : ""}
+        <!-- D\xE9tails Techniques & Financiers -->
+        <div style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 13px; color: #475569; line-height: 1.6; word-break: break-word;">
+          <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Param\xE8tres de calcul :</h5>
+          <ul style="margin: 0 0 12px 0; padding-left: 20px;">
+            <li><strong>Prix affich\xE9 (page) :</strong> ${formatCurr(data.simulations.loanDetails.propertyPrice)}
+              ${data.simulations.loanDetails.trackingPrice && data.simulations.loanDetails.trackingPrice !== data.simulations.loanDetails.propertyPrice ? `<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;" title="Prix tracking analytics Seloger \u2014 peut inclure honoraires ou \xEAtre arrondi">\u26A0 tracking: ${formatCurr(data.simulations.loanDetails.trackingPrice)}</span>` : ""}
+            </li>
+            <li><strong>Apport (20%) :</strong> ${formatCurr(data.simulations.loanDetails.downPayment)}</li>
+            <li><strong>Montant du pr\xEAt :</strong> ${formatCurr(data.simulations.loanDetails.loanAmount)}</li>
+            <li><strong>Frais mensuels estim\xE9s :</strong> ${formatCurr(classic.monthlyFrais)} (${formatCurr(classic.annualFrais)}/an)</li>
+            <li><strong>Revenus Locatifs (Classique) :</strong> ${formatCurr(classic.annualRevenue)}/an</li>
+            <li><strong>Loyer moyen zone (\u20AC/m\xB2) :</strong> ${averageRentM2 ? averageRentM2 + " \u20AC" : "N/A"}</li>
+            ${coloc ? `<li><strong>Revenus Locatifs (Coloc) :</strong> ${formatCurr(coloc.annualRevenue)}/an</li>` : ""}
+          </ul>
+
+          <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Informations Extraites (Charges/Taxes) :</h5>
+          <ul style="margin: 0 0 12px 0; padding-left: 20px;">
+            ${data.priceInfo && data.priceInfo.length ? data.priceInfo.map(([label, value]) => `<li><strong>${label} :</strong> ${value}</li>`).join("") : "<li>Aucune charge/taxe extraite.</li>"}
+          </ul>
+          
+          <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">\xC9nergie & DPE :</h5>
+          <ul style="margin: 0 0 12px 0; padding-left: 20px;">
+            ${data.energy && data.energy.length ? data.energy.map(([label, value]) => `<li><strong>${label} :</strong> ${value}</li>`).join("") : "<li>Non renseign\xE9</li>"}
+          </ul>
+
+          ${data.georisques ? `
+          <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Risques (G\xE9orisques) :</h5>
+          ${this.formatGeorisques(data.georisques)}
+          ` : ""}
+        </div>
+        
+      </div> 
+    `;
     }
     static formatGeorisques(georisques) {
       if (!georisques || Object.keys(georisques).length === 0) return "<div>Aucun risque identifi\xE9.</div>";
@@ -572,6 +699,101 @@
     };
   }
 
+  // src/export.js
+  var STORAGE_KEY = "selopti_export";
+  var MAX_ENTRIES = 500;
+  var SeloptiExporter = class {
+    constructor() {
+      this.entries = this._load();
+    }
+    /**
+     * Save a property snapshot.
+     * @param {Object} params
+     * @param {string}  params.url
+     * @param {string}  params.zoneId
+     * @param {Object}  params.basicStats       - from getBasicStats() (tracking data)
+     * @param {Object}  params.extractData      - from getData() (DOM extracted data)
+     * @param {number|null} params.averageRentM2
+     * @param {Object}  params.geoData
+     * @param {Object}  params.simulations      - computed simulationsData
+     */
+    save({ url, zoneId, basicStats, extractData, averageRentM2, geoData, simulations }) {
+      const entry = {
+        capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        url,
+        zoneId: zoneId ?? null,
+        // Raw inputs — useful to spot where prices diverge
+        raw: {
+          // Prix extrait du tracking (source: advertising.tracking_config)
+          priceFromTracking: basicStats?.price ?? null,
+          // Prix extrait du DOM (source: sections.price)
+          priceFromDOM: extractData?.price ?? null,
+          surface: basicStats?.surface ?? null,
+          bedrooms: basicStats?.bedrooms ?? null,
+          zipCode: basicStats?.zipCode ?? null,
+          averageRentM2: averageRentM2 ?? null,
+          // Toutes les charges/taxes parsées (copropriété, foncière, énergie…)
+          priceInfo: extractData?.priceInfo ?? [],
+          priceRegion: extractData?.priceRegion ?? [],
+          energy: extractData?.energy ?? [],
+          coordinates: geoData?.coordinates ?? null
+        },
+        // Résultats des calculs
+        simulations
+      };
+      const idx = this.entries.findIndex((e) => e.url === url);
+      if (idx !== -1) {
+        this.entries[idx] = entry;
+      } else {
+        this.entries.push(entry);
+        if (this.entries.length > MAX_ENTRIES) {
+          this.entries.shift();
+        }
+      }
+      this._persist();
+      console.log(`Selopti Export: ${this.entries.length} properties saved. Call seloptiExport.download() to export.`);
+    }
+    /** Download all entries as a JSON file. */
+    download() {
+      const json = JSON.stringify(this.entries, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `selopti-export-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log(`Selopti Export: downloaded ${this.entries.length} entries.`);
+    }
+    /** Clear all saved entries. */
+    clear() {
+      this.entries = [];
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (_) {
+      }
+      console.log("Selopti Export: cleared.");
+    }
+    _persist() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.entries));
+      } catch (e) {
+        console.warn("Selopti Export: could not persist to localStorage", e);
+      }
+    }
+    _load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+  };
+  var seloptiExport = new SeloptiExporter();
+
   // src/engine.js
   var rentCache = /* @__PURE__ */ new Map();
   var SeloptiEngine = class {
@@ -622,24 +844,31 @@
         geoManager.subscribe(id, async (geoData) => {
           const { coordinates } = geoData;
           const extractData = getData(data);
-          coordinates.longitude;
-          coordinates.latitude;
-          const COLOC_COEF = 0.75;
-          const fraisMensuel = extractData?.priceInfo.map((price) => {
-            const nombres = price[1].match(/\d+/g).map(Number);
-            const plusGrand = Math.max(...nombres);
-            const type = price[1].toLowerCase().includes("an") ? "annual" : "monthly";
-            return type === "annual" ? plusGrand / 12 : plusGrand;
+          const CHARGES_A_EXCLURE = ["estimation de la facture \xE9nerg\xE9tique"];
+          const fraisMensuel = (extractData?.priceInfo ?? []).filter((price) => !CHARGES_A_EXCLURE.some((label) => price[0]?.toLowerCase().includes(label))).map((price) => {
+            const text = price[1];
+            const normalized = text.replace(/(\d{1,3})\.(\d{3})(?!\d)/g, "$1$2");
+            const nombres = (normalized.match(/\d+/g) ?? []).map(Number).filter((n) => !(n >= 1900 && n <= 2099));
+            if (nombres.length === 0) return 0;
+            const valeur = nombres.reduce((a, b) => a + b, 0) / nombres.length;
+            const lower = text.toLowerCase();
+            if (lower.includes("trimestre")) return valeur / 3;
+            if (lower.includes("/an") || lower.includes("\u20AC/an") || /\ban\b/.test(lower) || lower.includes("annuel")) return valeur / 12;
+            return valeur;
           }).reduce((a, b) => a + b, 0);
           const bedrooms = basicStats.bedrooms || 0;
           const surface = basicStats.surface || 0;
           const classicMonthly = averageRentM2 && surface ? averageRentM2 * surface : 0;
           const classicAnnual = classicMonthly * 12;
-          const studioBaseline = 0;
-          const roomPrice = classicMonthly * COLOC_COEF;
+          const COLOC_COMMON_AREA_M2 = 20;
+          const COLOC_ROOM_PREMIUM = 1.5;
+          const MIN_ROOM_M2 = 9;
+          const privateM2PerRoom = bedrooms > 0 ? Math.max(MIN_ROOM_M2, (surface - COLOC_COMMON_AREA_M2) / bedrooms) : 0;
+          const roomPrice = privateM2PerRoom > 0 && averageRentM2 ? privateM2PerRoom * averageRentM2 * COLOC_ROOM_PREMIUM : 0;
           const colocMonthly = roomPrice * bedrooms;
           const colocAnnual = colocMonthly * 12;
-          const propertyPrice = extractData?.price;
+          const propertyPrice = extractData?.price || basicStats?.price || 0;
+          const trackingPrice = basicStats?.price || 0;
           const downPayment = propertyPrice * 0.2;
           const loanAmount = propertyPrice * 0.8;
           const annualRate = 0.04;
@@ -650,10 +879,12 @@
           const annualMortgage = monthlyMortgage * 12;
           const classicNetCashflowMonthly = classicMonthly - fraisMensuel - monthlyMortgage;
           const classicNetCashflowAnnual = classicAnnual - fraisMensuel * 12 - annualMortgage;
-          const classicRentability = propertyPrice > 0 ? classicNetCashflowAnnual / propertyPrice * 100 : 0;
+          const classicRentabilityBrute = propertyPrice > 0 ? classicAnnual / propertyPrice * 100 : 0;
+          const classicRentabilityNette = propertyPrice > 0 ? (classicAnnual - fraisMensuel * 12) / propertyPrice * 100 : 0;
           const simulationsData = {
             loanDetails: {
               propertyPrice,
+              trackingPrice,
               downPayment,
               loanAmount,
               rate: annualRate,
@@ -669,12 +900,14 @@
             annualMortgage,
             netCashflowMonthly: classicNetCashflowMonthly,
             netCashflowAnnual: classicNetCashflowAnnual,
-            rentabilityPercent: classicRentability
+            rentabilityBrute: classicRentabilityBrute,
+            rentabilityNette: classicRentabilityNette
           };
           if (bedrooms > 1) {
             const colocNetCashflowMonthly = colocMonthly - fraisMensuel - monthlyMortgage;
             const colocNetCashflowAnnual = colocAnnual - fraisMensuel * 12 - annualMortgage;
-            const colocRentability = propertyPrice > 0 ? colocNetCashflowAnnual / propertyPrice * 100 : 0;
+            const colocRentabilityBrute = propertyPrice > 0 ? colocAnnual / propertyPrice * 100 : 0;
+            const colocRentabilityNette = propertyPrice > 0 ? (colocAnnual - fraisMensuel * 12) / propertyPrice * 100 : 0;
             simulationsData["collocation"] = {
               roomPrice,
               monthlyRent: colocMonthly,
@@ -685,11 +918,13 @@
               annualMortgage,
               netCashflowMonthly: colocNetCashflowMonthly,
               netCashflowAnnual: colocNetCashflowAnnual,
-              rentabilityPercent: colocRentability,
+              rentabilityBrute: colocRentabilityBrute,
+              rentabilityNette: colocRentabilityNette,
               params: {
                 bedrooms,
-                studioBaseline,
-                coefficient: COLOC_COEF
+                privateM2PerRoom: Math.round(privateM2PerRoom * 10) / 10,
+                commonAreaM2: COLOC_COMMON_AREA_M2,
+                roomPremium: COLOC_ROOM_PREMIUM
               }
             };
           }
@@ -700,7 +935,16 @@
             averageRentM2,
             simulations: simulationsData
           };
-          const html = UIHTMLRenderer.renderDetailsHTML(finalData);
+          seloptiExport.save({
+            url: fullHref,
+            zoneId,
+            basicStats,
+            extractData,
+            averageRentM2,
+            geoData,
+            simulations: simulationsData
+          });
+          const html = UIHTMLRenderer.renderDetailsHTML(finalData, averageRentM2);
           this.inserter.insertHTML(id, element, html);
         });
       });
@@ -729,4 +973,5 @@
     }
   }
   window.seloptiInserter = engine.inserter;
+  window.seloptiExport = seloptiExport;
 })();

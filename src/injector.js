@@ -1,3 +1,27 @@
+// Expose seloptiExport helper in the page world (reads from localStorage shared with content script)
+window.seloptiExport = {
+  get entries() {
+    try { return JSON.parse(localStorage.getItem('selopti_export') || '[]'); } catch { return []; }
+  },
+  download() {
+    const entries = this.entries;
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selopti-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log(`Selopti Export: downloaded ${entries.length} entries.`);
+  },
+  clear() {
+    localStorage.removeItem('selopti_export');
+    console.log('Selopti Export: cleared.');
+  },
+};
+
 const originalFetch = window.fetch;
 
 window.fetch = async function (...args) {

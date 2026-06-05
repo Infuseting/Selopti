@@ -1,5 +1,5 @@
 export class UIHTMLRenderer {
-  static renderDetailsHTML(data) {
+  static renderDetailsHTML(data, averageRentM2) {
     const classic = data.simulations?.classic;
     const coloc = data.simulations?.collocation;
     const rentEst = data.rentEstimate;
@@ -44,11 +44,11 @@ export class UIHTMLRenderer {
       });
     }
 
-    return `<pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${this.escapeHTML(JSON.stringify(data, null, 2))}</pre>`;
+    //return `<pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${this.escapeHTML(JSON.stringify(data, null, 2))}</pre>`;
 
-    /*return `
+    return `
       <div class="selopti-container" style="font-family: 'Inter', system-ui, sans-serif; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(0,0,0,0.05); color: #1e293b; transition: transform 0.2s ease, box-shadow 0.2s ease; width: 100%; box-sizing: border-box;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
           <div style="display: flex; align-items: center;">
             <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 12px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
@@ -71,22 +71,22 @@ export class UIHTMLRenderer {
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden;">
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden; min-width: 0;">
             <div style="position: absolute; top: 0; right: 0; width: 40px; height: 40px; background: linear-gradient(135deg, transparent 50%, rgba(59, 130, 246, 0.1) 50%);"></div>
             <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
               Loyer Est.
             </span>
-            <div style="font-size: 24px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyRent)} <span style="font-size: 14px; font-weight: 500; color: #64748b;">/m</span></div>
+            <div style="font-size: 22px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyRent)} <span style="font-size: 13px; font-weight: 500; color: #64748b;">/m</span></div>
             ${rentEst && rentEst.rentPerSqm ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">Ref: ${formatCurr(rentEst.rentPerSqm)}/m²</div>` : ''}
           </div>
-          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden;">
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative; overflow: hidden; min-width: 0;">
             <div style="position: absolute; top: 0; right: 0; width: 40px; height: 40px; background: linear-gradient(135deg, transparent 50%, rgba(239, 68, 68, 0.1) 50%);"></div>
             <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
               Mensualité Prêt
             </span>
-            <div style="font-size: 24px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyMortgage)} <span style="font-size: 14px; font-weight: 500; color: #64748b;">/m</span></div>
+            <div style="font-size: 22px; font-weight: 800; color: #0f172a;">${formatCurr(classic.monthlyMortgage)} <span style="font-size: 13px; font-weight: 500; color: #64748b;">/m</span></div>
             <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">${data.simulations.loanDetails.durationYears} ans @ ${formatPct(data.simulations.loanDetails.rate * 100)}</div>
           </div>
         </div>
@@ -99,14 +99,18 @@ export class UIHTMLRenderer {
               Location Classique
             </h4>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="padding: 12px; border-radius: 10px; background: ${classic.netCashflowMonthly >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${classic.netCashflowMonthly >= 0 ? '#a7f3d0' : '#fecaca'};">
-              <div style="font-size: 12px; color: ${classic.netCashflowMonthly >= 0 ? '#059669' : '#dc2626'}; font-weight: 600; margin-bottom: 4px;">Cashflow Net</div>
-              <div style="font-size: 18px; font-weight: 800; color: ${classic.netCashflowMonthly >= 0 ? '#065f46' : '#991b1b'};">${formatCurr(classic.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: ${classic.netCashflowMonthly >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${classic.netCashflowMonthly >= 0 ? '#a7f3d0' : '#fecaca'};">
+              <div style="font-size: 12px; color: ${classic.netCashflowMonthly >= 0 ? '#059669' : '#dc2626'}; font-weight: 600;">Cashflow Net mensuel</div>
+              <div style="font-size: 16px; font-weight: 800; color: ${classic.netCashflowMonthly >= 0 ? '#065f46' : '#991b1b'};">${formatCurr(classic.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
             </div>
-            <div style="padding: 12px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe;">
-              <div style="font-size: 12px; color: #2563eb; font-weight: 600; margin-bottom: 4px;">Rentabilité Brute</div>
-              <div style="font-size: 18px; font-weight: 800; color: #1e3a8a;">${formatPct(classic.rentabilityPercent)}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe;">
+              <div style="font-size: 12px; color: #2563eb; font-weight: 600;">Rentabilité Brute</div>
+              <div style="font-size: 16px; font-weight: 800; color: #1e3a8a;">${formatPct(classic.rentabilityBrute)}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #f0fdf4; border: 1px solid #bbf7d0;">
+              <div style="font-size: 12px; color: #16a34a; font-weight: 600;">Rentabilité Nette charges</div>
+              <div style="font-size: 16px; font-weight: 800; color: #14532d;">${formatPct(classic.rentabilityNette)}</div>
             </div>
           </div>
         </div>
@@ -119,16 +123,20 @@ export class UIHTMLRenderer {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               Colocation (${coloc.params.bedrooms} ch.)
             </h4>
-            <span style="font-size: 12px; font-weight: 600; color: #8b5cf6; background: #ede9fe; padding: 2px 8px; border-radius: 10px;">${formatCurr(coloc.roomPrice)}/ch</span>
+            <span style="font-size: 12px; font-weight: 600; color: #8b5cf6; background: #ede9fe; padding: 2px 8px; border-radius: 10px;">${formatCurr(coloc.roomPrice)}/ch · ${coloc.params.privateM2PerRoom}m²</span>
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div style="padding: 12px; border-radius: 10px; background: ${coloc.netCashflowMonthly >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${coloc.netCashflowMonthly >= 0 ? '#a7f3d0' : '#fecaca'};">
-              <div style="font-size: 12px; color: ${coloc.netCashflowMonthly >= 0 ? '#059669' : '#dc2626'}; font-weight: 600; margin-bottom: 4px;">Cashflow Net</div>
-              <div style="font-size: 18px; font-weight: 800; color: ${coloc.netCashflowMonthly >= 0 ? '#065f46' : '#991b1b'};">${formatCurr(coloc.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: ${coloc.netCashflowMonthly >= 0 ? '#ecfdf5' : '#fef2f2'}; border: 1px solid ${coloc.netCashflowMonthly >= 0 ? '#a7f3d0' : '#fecaca'};">
+              <div style="font-size: 12px; color: ${coloc.netCashflowMonthly >= 0 ? '#059669' : '#dc2626'}; font-weight: 600;">Cashflow Net mensuel</div>
+              <div style="font-size: 16px; font-weight: 800; color: ${coloc.netCashflowMonthly >= 0 ? '#065f46' : '#991b1b'};">${formatCurr(coloc.netCashflowMonthly)} <span style="font-size: 13px; font-weight: 500; opacity: 0.8;">/m</span></div>
             </div>
-            <div style="padding: 12px; border-radius: 10px; background: #faf5ff; border: 1px solid #e9d5ff;">
-              <div style="font-size: 12px; color: #9333ea; font-weight: 600; margin-bottom: 4px;">Rentabilité Brute</div>
-              <div style="font-size: 18px; font-weight: 800; color: #581c87;">${formatPct(coloc.rentabilityPercent)}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #faf5ff; border: 1px solid #e9d5ff;">
+              <div style="font-size: 12px; color: #9333ea; font-weight: 600;">Rentabilité Brute</div>
+              <div style="font-size: 16px; font-weight: 800; color: #581c87;">${formatPct(coloc.rentabilityBrute)}</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 10px; background: #f5f3ff; border: 1px solid #ddd6fe;">
+              <div style="font-size: 12px; color: #7c3aed; font-weight: 600;">Rentabilité Nette charges</div>
+              <div style="font-size: 16px; font-weight: 800; color: #4c1d95;">${formatPct(coloc.rentabilityNette)}</div>
             </div>
           </div>
         </div>
@@ -137,11 +145,17 @@ export class UIHTMLRenderer {
         <div style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 13px; color: #475569; line-height: 1.6; word-break: break-word;">
           <h5 style="margin: 0 0 8px 0; font-size: 14px; color: #1e293b;">Paramètres de calcul :</h5>
           <ul style="margin: 0 0 12px 0; padding-left: 20px;">
-            <li><strong>Prix du bien :</strong> ${formatCurr(data.simulations.loanDetails.propertyPrice)}</li>
+            <li><strong>Prix affiché (page) :</strong> ${formatCurr(data.simulations.loanDetails.propertyPrice)}
+              ${data.simulations.loanDetails.trackingPrice && data.simulations.loanDetails.trackingPrice !== data.simulations.loanDetails.propertyPrice
+                ? `<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;" title="Prix tracking analytics Seloger — peut inclure honoraires ou être arrondi">⚠ tracking: ${formatCurr(data.simulations.loanDetails.trackingPrice)}</span>`
+                : ''
+              }
+            </li>
             <li><strong>Apport (20%) :</strong> ${formatCurr(data.simulations.loanDetails.downPayment)}</li>
             <li><strong>Montant du prêt :</strong> ${formatCurr(data.simulations.loanDetails.loanAmount)}</li>
             <li><strong>Frais mensuels estimés :</strong> ${formatCurr(classic.monthlyFrais)} (${formatCurr(classic.annualFrais)}/an)</li>
             <li><strong>Revenus Locatifs (Classique) :</strong> ${formatCurr(classic.annualRevenue)}/an</li>
+            <li><strong>Loyer moyen zone (€/m²) :</strong> ${averageRentM2 ? averageRentM2 + ' €' : 'N/A'}</li>
             ${coloc ? `<li><strong>Revenus Locatifs (Coloc) :</strong> ${formatCurr(coloc.annualRevenue)}/an</li>` : ''}
           </ul>
 
@@ -162,7 +176,7 @@ export class UIHTMLRenderer {
         </div>
         
       </div> 
-    `; */
+    `; 
   }
 
   static formatGeorisques(georisques) {

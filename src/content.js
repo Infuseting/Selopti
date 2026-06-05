@@ -21,6 +21,7 @@ window.addEventListener('selopti:geo-intercepted', (event) => {
 // 3. Importer les modules et charger l'engine
 import './geo.js'; // S'assure que le manager geo écoute les événements de l'injector
 import { SeloptiEngine } from './engine.js';
+import { seloptiExport } from './export.js';
 
 const engine = new SeloptiEngine();
 const urlParams = new URLSearchParams(window.location.search);
@@ -36,4 +37,5 @@ if (urlParams.get("distributionTypes") === "Buy") {
 }
 
 window.seloptiInserter = engine.inserter;
+window.seloptiExport = seloptiExport;
 
