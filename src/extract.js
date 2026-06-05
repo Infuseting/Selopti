@@ -98,7 +98,8 @@ export function getEncadrementLoyers(object) {
   const city = data?.adress?.city;
   const postalCode = data?.adress?.zipCode;
   const neighborhood = data?.adress?.district;
-  return "NON IMPLEMENTE VOUS DEVEZ VERIFIER VOUS-MEME";
+  // TODO: implement rent-control zone lookup for the property's city/postal code.
+  return null;
 }
 
 export function getBasicStats(object) {
@@ -175,16 +176,15 @@ export function getFallbackPriceInfo(object, priceInfo) {
 }
 
 export function getData(object) {
-  let priceInfo = getPriceInfo(object)
-  priceInfo = getFallbackPriceInfo(object, priceInfo)
+  let priceInfo = getPriceInfo(object);
+  priceInfo = getFallbackPriceInfo(object, priceInfo);
   return {
     price: getPrix(object),
-    priceInfo: priceInfo,
+    priceInfo,
     priceRegion: getPriceRegion(object),
     features: getFeatures(object),
     energy: getEnergy(object),
     description: getDescription(object),
     timeMetadata: getTimeMetadata(object),
-    encadrementLoyers: getEncadrementLoyers(object)
-  }
+  };
 }
