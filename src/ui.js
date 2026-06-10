@@ -93,10 +93,10 @@ export class UIHTMLRenderer {
     const formatPct = (val) => new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(val / 100);
 
     const formatDateInfo = (dateString) => {
-      if (!dateString) return { dateStr: 'N/A', daysAgoStr: '' };
+      if (!dateString) return { dateStr: 'N/A', daysAgoStr: '', diffDays: null };
       try {
         const d = new Date(dateString);
-        if (isNaN(d.getTime())) return { dateStr: dateString, daysAgoStr: '' };
+        if (isNaN(d.getTime())) return { dateStr: dateString, daysAgoStr: '', diffDays: null };
         
         const dCopy = new Date(d);
         dCopy.setHours(0,0,0,0);
@@ -112,9 +112,9 @@ export class UIHTMLRenderer {
         else if (diffDays < 0) daysAgoStr = `(Dans ${Math.abs(diffDays)} jours)`;
 
         const dateStr = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
-        return { dateStr, daysAgoStr };
+        return { dateStr, daysAgoStr, diffDays };
       } catch (e) {
-        return { dateStr: dateString, daysAgoStr: '' };
+        return { dateStr: dateString, daysAgoStr: '', diffDays: null };
       }
     };
 
@@ -126,6 +126,12 @@ export class UIHTMLRenderer {
         if (label === 'Date de mise à jour') updatedInfo = formatDateInfo(value);
       });
     }
+
+    const isMarketOld = createdInfo.diffDays != null && createdInfo.diffDays >= 180;
+    const marketBadge = createdInfo.dateStr !== 'N/A' ? `
+      <span style="background: ${isMarketOld ? '#fff7ed' : '#ecfdf5'}; color: ${isMarketOld ? '#c2410c' : '#166534'}; padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; border: 1px solid ${isMarketOld ? '#fdba74' : '#86efac'}; line-height: 1;">
+        ${isMarketOld ? 'Marché > 6 mois' : 'Marché récent'}
+      </span>` : '';
 
     //return `<pre style="white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">${this.escapeHTML(JSON.stringify(data, null, 2))}</pre>`;
 
@@ -140,6 +146,7 @@ export class UIHTMLRenderer {
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+            ${marketBadge}
             ${createdInfo.dateStr !== 'N/A' ? `
             <span style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; border: 1px solid #e2e8f0; line-height: 1;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
