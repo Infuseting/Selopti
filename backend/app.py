@@ -31,85 +31,13 @@ def create_app():
     if request.method == "OPTIONS":
       return ("", 204)
 
-    payload = request.get_json(silent=True) or {}
-
-    property_id = _resolve_property_id(payload)
-    if not property_id:
-      return jsonify({"error": "propertyId is required"}), 400
-
-    price = _to_int(payload.get("price"))
-    if price is None or price <= 0:
-      return jsonify({"error": "price must be a positive integer"}), 400
-
-    geo_location = payload.get("geoLocation")
-    publication_date = payload.get("publicationDate")
-    source_url = payload.get("url")
+    payload = request.get_json(silent=True)
+    if payload is None:
+      return jsonify({"error": "request body is required"}), 400
 
     db = get_db()
-
-    db.execute(
-      """
-      INSERT INTO bien (id, geo_location, publication_date, source_url)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        geo_location = COALESCE(excluded.geo_location, bien.geo_location),
-        publication_date = COALESCE(excluded.publication_date, bien.publication_date),
-        source_url = COALESCE(excluded.source_url, bien.source_url),
-        updated_at = datetime('now')
-      """,
-      (property_id, geo_location, publication_date, source_url),
-    )
-
-    row = db.execute(
-      """
-      SELECT id, price
-      FROM price
-      WHERE bien_id = ?
-      ORDER BY recorded_at DESC, id DESC
-      LIMIT 1
-      """,
-      (property_id,),
-    ).fetchone()
-
-    inserted = False
-    if row is None or int(row["price"]) != price:
-      db.execute(
-        "INSERT INTO price (bien_id, price) VALUES (?, ?)",
-        (property_id, price),
-      )
-      inserted = True
-
-    db.commit()
-
-    history_rows = db.execute(
-      """
-      SELECT id, price, recorded_at
-      FROM price
-      WHERE bien_id = ?
-      ORDER BY recorded_at ASC, id ASC
-      """,
-      (property_id,),
-    ).fetchall()
-
-    history = [
-      {
-        "id": item["id"],
-        "price": int(item["price"]),
-        "capturedAt": item["recorded_at"],
-      }
-      for item in history_rows
-    ]
-
-    last_change = _compute_last_change(history)
-
-    return jsonify(
-      {
-        "propertyId": property_id,
-        "inserted": inserted,
-        "history": history,
-        "lastChange": last_change,
-      }
-    )
+    body, status = _handle_track_price_payload(db, payload, request)
+    return jsonify(body), status
 
   @app.route("/api/properties/<property_id>/prices", methods=["GET"])
   def get_property_prices(property_id):
@@ -166,7 +94,172 @@ def init_db():
   schema = SCHEMA_PATH.read_text(encoding="utf-8")
   db = get_db()
   db.executescript(schema)
+  _migrate_db(db)
   db.commit()
+
+
+def _migrate_db(db):
+  columns = {row[1] for row in db.execute("PRAGMA table_info(price)").fetchall()}
+
+  if "user_uuid" not in columns:
+    db.execute("ALTER TABLE price ADD COLUMN user_uuid TEXT")
+
+  if "client_ip" not in columns:
+    db.execute("ALTER TABLE price ADD COLUMN client_ip TEXT")
+
+
+def _track_price_entry(db, payload, client_ip):
+  if not isinstance(payload, dict):
+    raise ValueError("request item must be an object")
+
+  property_id = _resolve_property_id(payload)
+  if not property_id:
+    raise ValueError("propertyId is required")
+
+  user_uuid = str(payload.get("userUuid") or "").strip()
+  if not user_uuid:
+    raise ValueError("userUuid is required")
+
+  price = _to_int(payload.get("price"))
+  if price is None or price <= 0:
+    raise ValueError("price must be a positive integer")
+
+  geo_location = payload.get("geoLocation")
+  publication_date = payload.get("publicationDate")
+  source_url = payload.get("url")
+
+  db.execute(
+    """
+    INSERT INTO bien (id, geo_location, publication_date, source_url)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      geo_location = COALESCE(excluded.geo_location, bien.geo_location),
+      publication_date = COALESCE(excluded.publication_date, bien.publication_date),
+      source_url = COALESCE(excluded.source_url, bien.source_url),
+      updated_at = datetime('now')
+    """,
+    (property_id, geo_location, publication_date, source_url),
+  )
+
+  row = db.execute(
+    """
+    SELECT id, price
+    FROM price
+    WHERE bien_id = ?
+    ORDER BY recorded_at DESC, id DESC
+    LIMIT 1
+    """,
+    (property_id,),
+  ).fetchone()
+
+  inserted = False
+  if row is None or int(row["price"]) != price:
+    db.execute(
+      "INSERT INTO price (bien_id, user_uuid, client_ip, price) VALUES (?, ?, ?, ?)",
+      (property_id, user_uuid, client_ip, price),
+    )
+    inserted = True
+
+  history_rows = db.execute(
+    """
+    SELECT id, price, recorded_at
+    FROM price
+    WHERE bien_id = ?
+    ORDER BY recorded_at ASC, id ASC
+    """,
+    (property_id,),
+  ).fetchall()
+
+  history = [
+    {
+      "id": item["id"],
+      "price": int(item["price"]),
+      "capturedAt": item["recorded_at"],
+    }
+    for item in history_rows
+  ]
+
+  return {
+    "propertyId": property_id,
+    "inserted": inserted,
+    "history": history,
+    "lastChange": _compute_last_change(history),
+  }
+
+
+def _handle_track_price_payload(db, payload, req):
+  client_ip = _resolve_client_ip(req)
+
+  if isinstance(payload, list):
+    return _track_price_batch(db, payload, client_ip), 200
+
+  if isinstance(payload, dict) and isinstance(payload.get("requests"), list):
+    return _track_price_batch(db, payload["requests"], client_ip), 200
+
+  if not isinstance(payload, dict):
+    return {"error": "request body must be an object or an array"}, 400
+
+  try:
+    result = _track_price_entry(db, payload, client_ip)
+    db.commit()
+    return result, 200
+  except ValueError as exc:
+    db.rollback()
+    return {"error": str(exc)}, 400
+  except Exception:
+    db.rollback()
+    return {"error": "internal server error"}, 500
+
+
+def _track_price_batch(db, requests, client_ip):
+  results = []
+
+  for item in requests:
+    request_id = item.get("requestId") if isinstance(item, dict) else None
+    try:
+      data = _track_price_entry(db, item, client_ip)
+      db.commit()
+      results.append(
+        {
+          "requestId": request_id,
+          "success": True,
+          "data": data,
+        }
+      )
+    except ValueError as exc:
+      db.rollback()
+      results.append(
+        {
+          "requestId": request_id,
+          "success": False,
+          "status": 400,
+          "error": str(exc),
+        }
+      )
+    except Exception:
+      db.rollback()
+      results.append(
+        {
+          "requestId": request_id,
+          "success": False,
+          "status": 500,
+          "error": "internal server error",
+        }
+      )
+
+  return {"results": results}
+
+
+def _resolve_client_ip(req):
+  forwarded_for = str(req.headers.get("X-Forwarded-For") or "").strip()
+  if forwarded_for:
+    return forwarded_for.split(",")[0].strip()
+
+  real_ip = str(req.headers.get("X-Real-IP") or "").strip()
+  if real_ip:
+    return real_ip
+
+  return str(req.remote_addr or "").strip() or None
 
 
 def _resolve_property_id(payload):

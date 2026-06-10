@@ -1,4 +1,84 @@
 export class UIHTMLRenderer {
+  static renderLoadingHTML() {
+    const shimmer = 'background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 45%, #e2e8f0 100%); background-size: 200% 100%; animation: selopti-skeleton-shimmer 1.4s ease-in-out infinite;';
+    const block = (height, width = '100%', radius = '10px') => `
+      <div style="height: ${height}; width: ${width}; border-radius: ${radius}; ${shimmer}"></div>
+    `;
+
+    return `
+      <div class="selopti-container selopti-loading" style="font-family: 'Inter', system-ui, sans-serif; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,1); border: 1px solid rgba(0,0,0,0.05); color: #1e293b; width: 100%; box-sizing: border-box; overflow: hidden;">
+        <style>
+          @keyframes selopti-skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        </style>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);"></div>
+            <div style="display: flex; flex-direction: column; gap: 8px; min-width: 180px;">
+              ${block('18px', '150px', '8px')}
+              ${block('12px', '110px', '999px')}
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; min-width: 120px; align-items: flex-end; flex: 0 0 auto;">
+            ${block('22px', '120px', '999px')}
+            ${block('22px', '96px', '999px')}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+            ${block('12px', '92px', '999px')}
+            ${block('24px', '140px', '10px')}
+            ${block('11px', '90px', '8px')}
+          </div>
+          <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+            ${block('12px', '120px', '999px')}
+            ${block('24px', '150px', '10px')}
+            ${block('11px', '100px', '8px')}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+            ${block('16px', '140px', '8px')}
+            ${block('12px', '60px', '999px')}
+          </div>
+          ${block('120px', '100%', '10px')}
+          <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            ${block('14px', '120px', '8px')}
+            ${block('14px', '100px', '8px')}
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="background: #ffffff; border-radius: 12px; border: 1px solid #f1f5f9; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px;">
+            ${block('16px', '150px', '8px')}
+            ${block('44px', '100%', '10px')}
+            ${block('44px', '100%', '10px')}
+            ${block('44px', '100%', '10px')}
+          </div>
+          <div style="background: #ffffff; border-radius: 12px; border: 1px solid #f1f5f9; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px;">
+            ${block('16px', '190px', '8px')}
+            ${block('44px', '100%', '10px')}
+            ${block('44px', '100%', '10px')}
+          </div>
+        </div>
+
+        <div style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 16px; display: grid; gap: 10px;">
+          ${block('14px', '180px', '8px')}
+          ${block('12px', '100%', '8px')}
+          ${block('12px', '92%', '8px')}
+          ${block('12px', '88%', '8px')}
+          ${block('14px', '160px', '8px')}
+          ${block('12px', '100%', '8px')}
+          ${block('12px', '86%', '8px')}
+        </div>
+      </div>
+    `;
+  }
+
   static renderDetailsHTML(data, averageRentM2) {
     const classic = data.simulations?.classic;
     const coloc = data.simulations?.collocation;

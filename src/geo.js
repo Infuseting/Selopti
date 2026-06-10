@@ -118,7 +118,6 @@ export class GeoDataManager {
   async _fetchGeorisques(id, data, cacheKey) {
     const coordinates = data.coordinates;
     if (!coordinates || !coordinates.latitude || !coordinates.longitude) return;
-
     if (!this.georisquesCache.has(cacheKey)) {
       const fetchPromise = (async () => {
         return await getGeorisques(coordinates);

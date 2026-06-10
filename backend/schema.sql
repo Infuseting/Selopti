@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS bien (
 CREATE TABLE IF NOT EXISTS price (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   bien_id TEXT NOT NULL,
+  user_uuid TEXT,
+  client_ip TEXT,
   price INTEGER NOT NULL,
   recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (bien_id) REFERENCES bien(id) ON DELETE CASCADE

@@ -35,7 +35,7 @@ window.fetch = async function (...args) {
     url = String(url);
 
     // Vérifier spécifiquement pour la requête geo
-    if (url.includes('geo') || url.includes('Geo')) {
+    if (url.includes('/geo') || url.includes('/Geo')) {
       const clone = response.clone();
       clone.json().then(data => {
         if (data && data.classifieds) {
@@ -99,13 +99,21 @@ window.addEventListener('selopti:do-fetch-rent', async (e) => {
 
 window.addEventListener('selopti:do-track-price', async (e) => {
   const detail = e?.detail ?? {};
-  const requestId = detail.requestId;
   const endpoint = detail.endpoint;
-  const payload = detail.payload;
+  const requests = Array.isArray(detail.requests)
+    ? detail.requests
+    : (detail.requestId && detail.payload)
+      ? [{ requestId: detail.requestId, ...detail.payload }]
+      : [];
 
-  if (!requestId || !endpoint || !payload) return;
+  if (!endpoint || requests.length === 0) return;
 
-  const resultEventName = `selopti:price-track-result-${requestId}`;
+  const emitResult = (requestId, result) => {
+    if (!requestId) return;
+    window.dispatchEvent(new CustomEvent(`selopti:price-track-result-${requestId}`, {
+      detail: result,
+    }));
+  };
 
   try {
     const res = await window.fetch(endpoint, {
@@ -113,24 +121,73 @@ window.addEventListener('selopti:do-track-price', async (e) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(requests),
     });
 
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    const resultItems = Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : null;
+
     if (!res.ok) {
-      window.dispatchEvent(new CustomEvent(resultEventName, {
-        detail: { success: false, status: res.status },
-      }));
+      if (resultItems) {
+        resultItems.forEach((item) => {
+          emitResult(item?.requestId, {
+            success: false,
+            status: item?.status ?? res.status,
+            error: item?.error ?? `Request failed with status ${res.status}`,
+          });
+        });
+      } else {
+        requests.forEach((request) => {
+          emitResult(request.requestId, {
+            success: false,
+            status: res.status,
+          });
+        });
+      }
       return;
     }
 
-    const data = await res.json();
-    window.dispatchEvent(new CustomEvent(resultEventName, {
-      detail: { success: true, data },
-    }));
+    if (resultItems) {
+      resultItems.forEach((item) => {
+        if (item?.success === false) {
+          emitResult(item.requestId, {
+            success: false,
+            status: item.status ?? 500,
+            error: item.error ?? 'Tracking failed',
+          });
+          return;
+        }
+
+        emitResult(item.requestId, {
+          success: true,
+          data: item?.data ?? item,
+        });
+      });
+      return;
+    }
+
+    const fallbackRequest = requests[0];
+    emitResult(fallbackRequest.requestId, {
+      success: true,
+      data,
+    });
   } catch (err) {
     console.error('Selopti: price tracking failed', err);
-    window.dispatchEvent(new CustomEvent(resultEventName, {
-      detail: { success: false, error: String(err) },
-    }));
+    requests.forEach((request) => {
+      emitResult(request.requestId, {
+        success: false,
+        error: String(err),
+      });
+    });
   }
 });

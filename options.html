@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Selopti - Configuration</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f7fb;
+        --panel: rgba(255, 255, 255, 0.86);
+        --panel-border: rgba(148, 163, 184, 0.24);
+        --text: #0f172a;
+        --muted: #64748b;
+        --accent: #2563eb;
+        --accent-strong: #1d4ed8;
+        --shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 36%),
+          radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 32%),
+          linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+      }
+
+      .page {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 40px 20px 56px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--accent-strong);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(30px, 4vw, 44px);
+        line-height: 1.05;
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 62ch;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+        padding: 22px;
+      }
+
+      .section-title {
+        margin: 0 0 16px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      label {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        width: 100%;
+        border: 1px solid #cbd5e1;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 12px 14px;
+        font: inherit;
+        color: var(--text);
+        outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+      }
+
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      textarea:focus {
+        border-color: rgba(37, 99, 235, 0.7);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .section-group {
+        margin-bottom: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(248, 250, 252, 0.68);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .subsection-title {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .toggle strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .toggle span {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .switch {
+        width: 50px;
+        height: 30px;
+        appearance: none;
+        border-radius: 999px;
+        background: #cbd5e1;
+        position: relative;
+        flex: 0 0 auto;
+        cursor: pointer;
+        transition: background .18s ease;
+      }
+
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+        transition: transform .18s ease;
+      }
+
+      .switch:checked {
+        background: var(--accent);
+      }
+
+      .switch:checked::after {
+        transform: translateX(20px);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff;
+      }
+
+      .secondary {
+        background: rgba(226, 232, 240, 0.9);
+        color: #0f172a;
+      }
+
+      .status {
+        min-height: 22px;
+        margin-top: 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .status[data-tone="success"] { color: #059669; }
+      .status[data-tone="error"] { color: #dc2626; }
+      .status[data-tone="info"] { color: var(--muted); }
+
+      .summary-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .summary-item {
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(248, 250, 252, 0.92);
+        border: 1px solid #e2e8f0;
+      }
+
+      .summary-item strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .summary-item span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 820px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+    <script type="module" src="dist/options.js"></script>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">Selopti</div>
+        <h1>Configuration de l’extension</h1>
+        <p class="subtitle">Ajuste ici les paramètres du tracking des prix. Les changements sont enregistrés localement dans le navigateur et seront pris en compte au prochain chargement des pages SeLoger.</p>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2 class="section-title">Réglages de calcul</h2>
+
+          <form id="settings-form">
+            <div class="section-group">
+              <h3 class="subsection-title">Simulation du prêt</h3>
+
+              <div class="field">
+                <label for="mortgageAnnualRate">Taux annuel (%)</label>
+                <input id="mortgageAnnualRate" type="number" min="0" step="0.01" />
+              </div>
+
+              <div class="field">
+                <label for="mortgageDurationYears">Durée du prêt (années)</label>
+                <input id="mortgageDurationYears" type="number" min="1" step="1" />
+              </div>
+
+              <div class="field">
+                <label for="mortgageDownPaymentRatio">Apport (%)</label>
+                <input id="mortgageDownPaymentRatio" type="number" min="0" step="0.01" />
+              </div>
+            </div>
+
+            <div class="section-group">
+              <h3 class="subsection-title">Simulation colocation</h3>
+
+              <div class="field">
+                <label for="colocRoomSizeM2">Surface privée par chambre (m²)</label>
+                <input id="colocRoomSizeM2" type="number" min="1" step="0.1" />
+              </div>
+
+              <div class="field">
+                <label for="colocAppartCoef">Coefficient parties communes</label>
+                <input id="colocAppartCoef" type="number" min="0" step="0.01" />
+              </div>
+            </div>
+
+            <div class="section-group">
+              <h3 class="subsection-title">Charges exclues</h3>
+
+              <div class="field">
+                <label for="chargesExcludedLabels">Libellés à ignorer</label>
+                <textarea id="chargesExcludedLabels" placeholder="estimation de la facture énergétique"></textarea>
+                <div class="hint">Une ligne par libellé, ou sépare-les par des virgules. Ces valeurs sont utilisées pour exclure des frais tenant du calcul mensuel.</div>
+              </div>
+            </div>
+
+            <div class="section-group">
+              <h3 class="subsection-title">Tracking des prix</h3>
+
+            <div class="field toggle">
+              <div>
+                <strong>Activer le tracking</strong>
+                <span>Envoie les prix détectés vers l’API Selopti.</span>
+              </div>
+              <input id="enabled" class="switch" type="checkbox" />
+            </div>
+
+            <div class="field">
+              <label for="endpoint">URL de l’API</label>
+              <input id="endpoint" type="text" placeholder="http://localhost:3000/api/prices/track" />
+              <div class="hint">Endpoint appelé pour chaque lot d’écritures. Tu peux le pointer vers une autre instance si besoin.</div>
+            </div>
+
+            <div class="field">
+              <label for="timeoutMs">Timeout de requête (ms)</label>
+              <input id="timeoutMs" type="number" min="100" step="100" />
+            </div>
+
+            <div class="field">
+              <label for="batchWindowMs">Fenêtre de batch (ms)</label>
+              <input id="batchWindowMs" type="number" min="0" step="10" />
+              <div class="hint">Les écritures détectées dans cette fenêtre sont regroupées en une seule requête.</div>
+            </div>
+
+            <div class="field">
+              <label for="batchSize">Taille max. du batch</label>
+              <input id="batchSize" type="number" min="1" step="1" />
+              <div class="hint">Nombre maximal de reports envoyés dans une seule requête.</div>
+            </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary" type="submit">Enregistrer</button>
+              <button class="secondary" id="reset-button" type="button">Réinitialiser</button>
+            </div>
+
+            <div id="status" class="status" data-tone="info"></div>
+          </form>
+        </section>
+
+        <aside class="panel">
+          <h2 class="section-title">Conseils</h2>
+          <div class="summary-list">
+            <div class="summary-item">
+              <strong>Les réglages sont centralisés</strong>
+              <span>Le prêt, la colocation, les charges exclues et le tracking vivent dans la même configuration.</span>
+            </div>
+            <div class="summary-item">
+              <strong>Recharge après modification</strong>
+              <span>Les pages SeLoger déjà ouvertes peuvent nécessiter un rechargement pour appliquer les nouveaux paramètres calculés au chargement.</span>
+            </div>
+            <div class="summary-item">
+              <strong>Batch plus agressif</strong>
+              <span>Réduis la fenêtre de batch si tu veux des envois plus rapides, ou augmente-la pour réduire encore le trafic réseau.</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </body>
+</html>

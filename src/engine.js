@@ -10,6 +10,7 @@ import { PriceHistoryService } from './services/PriceHistoryService.js';
 import { ChargesParser } from './finance/ChargesParser.js';
 import { MortgageCalculator } from './finance/MortgageCalculator.js';
 import { FinancialSimulator } from './finance/FinancialSimulator.js';
+import { normalizeSeloptiConfig } from './config.js';
 
 /**
  * SeloptiEngine
@@ -37,12 +38,17 @@ export class SeloptiEngine {
     priceHistoryService,
     chargesParser,
     simulator,
+    config,
   } = {}) {
+    const runtimeConfig = normalizeSeloptiConfig(config);
     this.inserter = inserter ?? new SeloptiInserter();
     this._rentService = rentService ?? new RentService();
-    this._priceHistoryService = priceHistoryService ?? new PriceHistoryService();
-    this._chargesParser = chargesParser ?? new ChargesParser();
-    this._simulator = simulator ?? new FinancialSimulator(new MortgageCalculator());
+    this._priceHistoryService = priceHistoryService ?? new PriceHistoryService(runtimeConfig.priceTracker);
+    this._chargesParser = chargesParser ?? new ChargesParser(runtimeConfig.chargesExcludedLabels);
+    this._simulator = simulator ?? new FinancialSimulator(
+      new MortgageCalculator(runtimeConfig.mortgage),
+      runtimeConfig.coloc,
+    );
     this.scanner = scanner ?? new DOMScanner(
       (id, element, url) => this._handleMatchedElement(id, element, url),
     );
@@ -53,8 +59,11 @@ export class SeloptiEngine {
   }
 
   async _handleMatchedElement(id, element, fullHref) {
+    this.inserter.insertHTML(id, element, UIHTMLRenderer.renderLoadingHTML());
+
     const result = await PropertyDataProvider.fetchPropertyData(fullHref);
     if (!result) return;
+    
 
     const { zoneId, data } = result;
     const basicStats = getBasicStats(data);

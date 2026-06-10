@@ -10,10 +10,10 @@ injectorScript.type = 'text/javascript';
 (document.head || document.documentElement).appendChild(injectorScript);
 
 // 2. Écouter les événements geo interceptés
-window.addEventListener('selopti:geo-intercepted', (event) => {
+globalThis.addEventListener('selopti:geo-intercepted', (event) => {
 
   // Passer les données à l'engine via un event custom
-  window.dispatchEvent(new CustomEvent('selopti:geo-data', {
+  globalThis.dispatchEvent(new CustomEvent('selopti:geo-data', {
     detail: event.detail
   }));
 });
@@ -22,20 +22,26 @@ window.addEventListener('selopti:geo-intercepted', (event) => {
 import './geo.js'; // S'assure que le manager geo écoute les événements de l'injector
 import { SeloptiEngine } from './engine.js';
 import { seloptiExport } from './export.js';
+import { loadSeloptiConfig } from './config.js';
 
-const engine = new SeloptiEngine();
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get("distributionTypes") === "Buy") {
-  if (document.readyState === 'loading') {
+async function bootstrap() {
+  const runtimeConfig = await loadSeloptiConfig().catch(() => null);
+  const engine = new SeloptiEngine({ config: runtimeConfig ?? undefined });
+  const urlParams = new URLSearchParams(globalThis.location.search);
 
-    document.addEventListener('DOMContentLoaded', () => {
+  if (urlParams.get('distributionTypes') === 'Buy') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        engine.init();
+      });
+    } else {
       engine.init();
-    });
-  } else {
-    engine.init();
+    }
   }
+
+  globalThis.seloptiInserter = engine.inserter;
+  globalThis.seloptiExport = seloptiExport;
 }
 
-window.seloptiInserter = engine.inserter;
-window.seloptiExport = seloptiExport;
+bootstrap();
 

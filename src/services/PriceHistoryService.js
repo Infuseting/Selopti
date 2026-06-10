@@ -1,4 +1,6 @@
-import { PRICE_TRACKER_CONFIG, PROPERTY_ID_REGEX } from '../config.js';
+import { PRICE_TRACKER_CONFIG, PROPERTY_ID_REGEX, loadPriceTrackerConfig, normalizePriceTrackerConfig } from '../config.js';
+
+const USER_UUID_STORAGE_KEY = 'selopti_user_uuid';
 
 /**
  * PriceHistoryService
@@ -11,9 +13,31 @@ export class PriceHistoryService {
    * @param {typeof PRICE_TRACKER_CONFIG} [config]
    */
   constructor(config = PRICE_TRACKER_CONFIG) {
-    this._config = config;
+    this._config = normalizePriceTrackerConfig(config);
+    this._userUuid = this._getOrCreateUserUuid();
     /** @type {Map<string, Promise<object|null>>} */
     this._inflight = new Map();
+    /** @type {Array<{ requestId: string, propertyId: string, url: string, price: number, userUuid: string }>} */
+    this._pendingRequests = [];
+    this._batchTimer = null;
+    this._configPromise = config === PRICE_TRACKER_CONFIG
+      ? loadPriceTrackerConfig().then((loadedConfig) => {
+        this._config = loadedConfig;
+        return loadedConfig;
+      }).catch(() => this._config)
+      : Promise.resolve(this._config);
+
+    const storageOnChanged = globalThis.browser?.storage?.onChanged ?? globalThis.chrome?.storage?.onChanged;
+    if (storageOnChanged?.addListener) {
+      storageOnChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local') return;
+
+        const change = changes?.selopti_price_tracker_config;
+        if (!change) return;
+
+        this._config = normalizePriceTrackerConfig(change.newValue ?? {});
+      });
+    }
   }
 
   /**
@@ -23,7 +47,9 @@ export class PriceHistoryService {
    * @param {number} price
    * @returns {Promise<object|null>}
    */
-  track(url, price) {
+  async track(url, price) {
+    await this._configPromise;
+
     if (!this._config.enabled) return Promise.resolve(null);
 
     const propertyId = this.extractPropertyId(url);
@@ -73,14 +99,77 @@ export class PriceHistoryService {
       }, this._config.timeoutMs);
 
       globalThis.addEventListener(resultEventName, onResult);
-      globalThis.dispatchEvent(new CustomEvent('selopti:do-track-price', {
-        detail: {
-          requestId,
-          endpoint: this._config.endpoint,
-          payload: { propertyId, url, price },
-        },
-      }));
+      this._pendingRequests.push({
+        requestId,
+        propertyId,
+        url,
+        price,
+        userUuid: this._userUuid,
+      });
+      this._scheduleBatchFlush();
     });
+  }
+
+  /** @private */
+  _getOrCreateUserUuid() {
+    try {
+      const existing = globalThis.localStorage?.getItem(USER_UUID_STORAGE_KEY);
+      if (existing) return existing;
+    } catch (_) {
+      // Ignore localStorage access errors and fall back to an ephemeral ID.
+    }
+
+    const generated = this._generateUuid();
+
+    try {
+      globalThis.localStorage?.setItem(USER_UUID_STORAGE_KEY, generated);
+    } catch (_) {
+      // Ignore localStorage access errors and continue with the generated ID.
+    }
+
+    return generated;
+  }
+
+  /** @private */
+  _generateUuid() {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+      const random = Math.floor(Math.random() * 16);
+      const value = char === 'x' ? random : ((random & 0x3) | 0x8);
+      return value.toString(16);
+    });
+  }
+
+  /** @private */
+  _scheduleBatchFlush() {
+    if (this._batchTimer) return;
+
+    this._batchTimer = setTimeout(() => {
+      this._batchTimer = null;
+      this._flushBatch();
+    }, this._config.batchWindowMs ?? 100);
+  }
+
+  /** @private */
+  _flushBatch() {
+    if (this._pendingRequests.length === 0) return;
+
+    const batchSize = this._config.batchSize ?? this._pendingRequests.length;
+    const requests = this._pendingRequests.splice(0, batchSize);
+
+    globalThis.dispatchEvent(new CustomEvent('selopti:do-track-price', {
+      detail: {
+        endpoint: this._config.endpoint,
+        requests,
+      },
+    }));
+
+    if (this._pendingRequests.length > 0) {
+      this._scheduleBatchFlush();
+    }
   }
 
   /** @private */

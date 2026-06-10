@@ -4,11 +4,16 @@
   "version": "0.1.0",
   "description": "Logs new .classified-card elements on SeLoger pages.",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "*://www.seloger.com/*"
   ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "web_accessible_resources": [
     {
       "resources": ["dist/injector.js"],
