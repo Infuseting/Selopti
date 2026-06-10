@@ -116,6 +116,14 @@ export function getFallbackPriceInfo(object, priceInfo) {
   let priceLabels = priceInfo.map(([label, value]) => label);
   let description = getDescription(object);
   const taxEstimate = object?.app_cldp?.data?.classified?.sections?.taxEstimate;
+
+  const pushOrKeep = (label, value) => {
+    if (!priceLabels.includes(label)) {
+      priceInfo.push([label, value]);
+      priceLabels.push(label);
+    }
+  };
+
   if (!priceLabels.includes("Charges de copropriété")) {
     let extractedCharges = null;
     let m = description.match(/charges\s+(?:.{0,50}?)annuelles(?:.{0,100}?)?(?:[:\s]|sont\s+de\s+)+([\d\s.,]+)\s*(?:€|euros)/i);
@@ -144,33 +152,28 @@ export function getFallbackPriceInfo(object, priceInfo) {
       }
     }
 
-    if (extractedCharges) {
-      priceInfo.push([
-        "Charges de copropriété",
-        extractedCharges
-      ]);
-    }
+    pushOrKeep("Charges de copropriété", extractedCharges ?? "Non renseigné");
   }
 
   if (!priceLabels.includes("Estimation de la facture énergétique")) {
     let m = description.match(/entre\s+([\d\s.,]+)\s*(?:€|euros)?\s*et\s+([\d\s.,]+)\s*(?:€|euros)/i);
-    if (m) {
-      priceInfo.push([
-        "Estimation de la facture énergétique",
-        `entre ${m[1].trim()} et ${m[2].trim()} €/an`
-      ]);
-    }
+    pushOrKeep(
+      "Estimation de la facture énergétique",
+      m ? `entre ${m[1].trim()} et ${m[2].trim()} €/an` : "Non renseigné"
+    );
   }
 
   if (!priceLabels.includes("Taxe Foncière")) {
     let m = description.match(/taxe\s+fonci[eè]re(?:.*?)?[:\s]+([\d\s.,]+)\s*(?:€|euros)/i);
+    let taxValue = "Non renseigné";
     if (m) {
-      priceInfo.push(["Taxe Foncière", `${m[1].trim()} €/an`]);
+      taxValue = `${m[1].trim()} €/an`;
     } else if (taxEstimate?.estimatedTaxeFonciereMin != null && taxEstimate?.estimatedTaxeFonciereMax != null) {
       const min = Math.round(taxEstimate.estimatedTaxeFonciereMin);
       const max = Math.round(taxEstimate.estimatedTaxeFonciereMax);
-      priceInfo.push(["Taxe Foncière", `entre ${min} et ${max} €/an`]);
+      taxValue = `entre ${min} et ${max} €/an`;
     }
+    pushOrKeep("Taxe Foncière", taxValue);
   }
   return priceInfo
 }
