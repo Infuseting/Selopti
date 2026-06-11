@@ -51,6 +51,7 @@ export class SeloptiEngine {
     this._simulator = simulator ?? new FinancialSimulator(
       new MortgageCalculator(runtimeConfig.mortgage),
       runtimeConfig.coloc,
+      runtimeConfig.roi.fraisNotairePct,
     );
     this._roiScorer = roiScorer ?? new ROIScorer(runtimeConfig.roi);
     this.scanner = scanner ?? new DOMScanner(

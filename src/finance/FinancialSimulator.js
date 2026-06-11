@@ -1,4 +1,4 @@
-import { COLOC_CONFIG } from '../config.js';
+import { COLOC_CONFIG, ROI_DEFAULTS } from '../config.js';
 
 /**
  * FinancialSimulator
@@ -18,10 +18,12 @@ export class FinancialSimulator {
   /**
    * @param {import('./MortgageCalculator.js').MortgageCalculator} mortgageCalculator
    * @param {typeof COLOC_CONFIG} [colocConfig]
+   * @param {number} [fraisNotairePct] - Notaire fees as a fraction of property price (default 8 %).
    */
-  constructor(mortgageCalculator, colocConfig = COLOC_CONFIG) {
+  constructor(mortgageCalculator, colocConfig = COLOC_CONFIG, fraisNotairePct = ROI_DEFAULTS.fraisNotairePct) {
     this._mortgage = mortgageCalculator;
     this._colocConfig = colocConfig;
+    this._fraisNotairePct = fraisNotairePct;
   }
 
   /**
@@ -38,6 +40,8 @@ export class FinancialSimulator {
    */
   simulate({ propertyPrice, trackingPrice, surface, bedrooms, monthlyCharges, averageRentM2 }) {
     const mortgage = this._mortgage.compute(propertyPrice);
+    const fraisNotaire = Math.round(propertyPrice * this._fraisNotairePct);
+    const prixTotal = propertyPrice + fraisNotaire;
 
     const simulationsData = {
       loanDetails: {
@@ -56,7 +60,7 @@ export class FinancialSimulator {
       monthlyRent: classicMonthlyRent,
       monthlyCharges,
       mortgage,
-      propertyPrice,
+      prixTotal,
     });
 
     // ── Colocation (only applicable with 2+ bedrooms) ───────────────────────
@@ -77,7 +81,7 @@ export class FinancialSimulator {
           monthlyRent: colocMonthlyRent,
           monthlyCharges,
           mortgage,
-          propertyPrice,
+          prixTotal,
         }),
         params: {
           bedrooms,
@@ -97,7 +101,7 @@ export class FinancialSimulator {
    * Build a standardised scenario result object.
    * @private
    */
-  _buildScenario({ monthlyRent, monthlyCharges, mortgage, propertyPrice }) {
+  _buildScenario({ monthlyRent, monthlyCharges, mortgage, prixTotal }) {
     const annualRent = monthlyRent * 12;
     const annualCharges = monthlyCharges * 12;
 
@@ -110,10 +114,10 @@ export class FinancialSimulator {
       annualMortgage: mortgage.annualPayment,
       netCashflowMonthly: monthlyRent - monthlyCharges - mortgage.monthlyPayment,
       netCashflowAnnual: annualRent - annualCharges - mortgage.annualPayment,
-      // Gross yield: gross rents / price (no charges, no financing)
-      rentabilityBrute: propertyPrice > 0 ? (annualRent / propertyPrice) * 100 : 0,
-      // Net yield: (rents − operating charges) / price (no financing)
-      rentabilityNette: propertyPrice > 0 ? ((annualRent - annualCharges) / propertyPrice) * 100 : 0,
+      // Gross yield: gross rents / prix total acquisition (notaire inclus)
+      rentabilityBrute: prixTotal > 0 ? (annualRent / prixTotal) * 100 : 0,
+      // Net yield: (rents − operating charges) / prix total acquisition (notaire inclus)
+      rentabilityNette: prixTotal > 0 ? ((annualRent - annualCharges) / prixTotal) * 100 : 0,
     };
   }
 

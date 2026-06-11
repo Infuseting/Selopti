@@ -512,7 +512,7 @@
             { bg: '#eff6ff', border: '#bfdbfe', textLabel: '#2563eb', textValue: '#1e3a8a' },
           )}
           ${this._scenarioRow(
-            'Rentabilité Nette charges',
+            'Rentabilité Nette',
             this._pct(scenario.rentabilityNette),
             { bg: '#f0fdf4', border: '#bbf7d0', textLabel: '#16a34a', textValue: '#14532d' },
           )}
@@ -783,23 +783,23 @@
       .slice(-24)
       .map(i => ({ price: Number(i.price), capturedAt: i.capturedAt ?? null }));
 
-    const scenarioClassic = this._renderScenario(classic, 'Location Classique', {
-      colorAccent: '#1e40af',
-      colorBg:     '#eff6ff',
-      colorBorder: '#bfdbfe',
-      colorBadge:  '#3b82f6',
-      badgeText:   null,
-    });
+    const scenarioClassic = '' //this._renderScenario(classic, 'Location Classique', {
+    //  colorAccent: '#1e40af',
+    //  colorBg:     '#eff6ff',
+    //  colorBorder: '#bfdbfe',
+    //  colorBadge:  '#3b82f6',
+    //  badgeText:   null,
+    //});
 
-    const scenarioColoc = coloc
-      ? this._renderScenario(coloc, `Colocation — ${coloc.params?.bedrooms ?? '?'} chambres`, {
-          colorAccent: '#5b21b6',
-          colorBg:     '#faf5ff',
-          colorBorder: '#ddd6fe',
-          colorBadge:  '#8b5cf6',
-          badgeText:   coloc.roomPrice ? `${this._fmt(coloc.roomPrice)}/ch` : null,
-        })
-      : '';
+    const scenarioColoc = '' //coloc
+      //? this._renderScenario(coloc, `Colocation — ${coloc.params?.bedrooms ?? '?'} chambres`, {
+      //    colorAccent: '#5b21b6',
+      //    colorBg:     '#faf5ff',
+      //    colorBorder: '#ddd6fe',
+      //    colorBadge:  '#8b5cf6',
+      //    badgeText:   coloc.roomPrice ? `${this._fmt(coloc.roomPrice)}/ch` : null,
+      //  })
+      //: '';
 
     return `
       <div class="selopti-container" style="font-family:'Inter',system-ui,sans-serif;background:#fff;border-radius:16px;padding:0;margin-top:16px;box-shadow:0 4px 24px rgba(0,0,0,0.07);border:1px solid #e2e8f0;color:#0f172a;width:100%;box-sizing:border-box;overflow:hidden;position:relative;z-index:20;">
