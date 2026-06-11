@@ -144,7 +144,7 @@ window.fetch = async function (...args) {
       clone.json().then(data => {
         if (data && data.classifieds) {
           window.dispatchEvent(new CustomEvent('selopti:geo-intercepted', {
-            detail: data
+            detail: JSON.stringify(data)
           }));
         }
       }).catch(err => {
@@ -194,7 +194,7 @@ window.addEventListener('selopti:do-fetch-rent', async (e) => {
     }
     const data = await res.json();
     console.log(data);
-    window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: data }));
+    window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: JSON.stringify(data) }));
   } catch (err) {
     console.error("Selopti: Error fetching rent for zoneId", zoneId, err);
     window.dispatchEvent(new CustomEvent(`selopti:rent-result-${zoneId}`, { detail: null }));
@@ -202,7 +202,13 @@ window.addEventListener('selopti:do-fetch-rent', async (e) => {
 });
 
 window.addEventListener('selopti:do-track-price', async (e) => {
-  const detail = e?.detail ?? {};
+  let detail = {};
+  try {
+    detail = typeof e.detail === 'string' ? JSON.parse(e.detail) : (e.detail || {});
+  } catch (err) {
+    console.error("Selopti: Failed to parse do-track-price detail", err);
+    return;
+  }
   const endpoint = detail.endpoint;
   const requests = Array.isArray(detail.requests)
     ? detail.requests
@@ -215,7 +221,7 @@ window.addEventListener('selopti:do-track-price', async (e) => {
   const emitResult = (requestId, result) => {
     if (!requestId) return;
     window.dispatchEvent(new CustomEvent(`selopti:price-track-result-${requestId}`, {
-      detail: result,
+      detail: JSON.stringify(result),
     }));
   };
 

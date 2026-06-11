@@ -44,6 +44,7 @@ export class SeloptiEngine {
     config,
   } = {}) {
     const runtimeConfig = normalizeSeloptiConfig(config);
+    this._config = runtimeConfig;
     this.inserter = inserter ?? new SeloptiInserter();
     this._rentService = rentService ?? new RentService();
     this._priceHistoryService = priceHistoryService ?? new PriceHistoryService(runtimeConfig.priceTracker);
@@ -86,7 +87,14 @@ export class SeloptiEngine {
     const monthlyCharges = this._chargesParser.parseMonthly(extractData?.priceInfo);
     const propertyPrice = extractData?.price || basicStats?.price || 0;
 
-    const priceHistory = await this._priceHistoryService.track(fullHref, propertyPrice);
+    const creationDateEntry = extractData?.timeMetadata?.find(([l]) => l === 'Date de création');
+    const creationDate = creationDateEntry ? creationDateEntry[1] : null;
+    const publicationDate = creationDate ? String(creationDate).slice(0, 10) : null;
+
+    let geoLocation = null;
+    if (geoData?.coordinates?.latitude && geoData?.coordinates?.longitude) {
+      geoLocation = `${geoData.coordinates.latitude},${geoData.coordinates.longitude}`;
+    }
 
     const simulationsData = this._simulator.simulate({
       propertyPrice,
@@ -107,6 +115,26 @@ export class SeloptiEngine {
       energy:        extractData?.energy      || [],
       features:      extractData?.features    || [],
       description:   extractData?.description || '',
+    });
+
+    const dpe = this._roiScorer._extractDPE(extractData?.energy);
+
+    const priceHistory = await this._priceHistoryService.track(fullHref, propertyPrice, {
+      geoLocation,
+      publicationDate,
+      profitability: {
+        surface: basicStats.surface || 0,
+        bedrooms: basicStats.bedrooms || 0,
+        monthlyCharges,
+        averageRentM2,
+        dpe,
+        config: this._config,
+        rentabilityBrute: roiScore.kpis.rentabilite_brute_pct,
+        rentabilityNette: roiScore.kpis.rentabilite_nette_pct,
+        cashflowMensuel: roiScore.kpis.cashflow_mensuel,
+        score: roiScore.verdict.score,
+        verdictSignal: roiScore.verdict.signal,
+      }
     });
 
     const finalData = {

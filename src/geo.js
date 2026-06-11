@@ -139,7 +139,14 @@ export class GeoDataManager {
 export const geoManager = new GeoDataManager();
 
 window.addEventListener('selopti:geo-data', (event) => {
-  if (event.detail && event.detail.classifieds) {
-    geoManager.recordCoordinates(event.detail.classifieds);
+  let detail = null;
+  try {
+    detail = typeof event.detail === 'string' ? JSON.parse(event.detail) : event.detail;
+  } catch (err) {
+    console.error("Selopti: Failed to parse geo-data detail", err);
+    return;
+  }
+  if (detail && detail.classifieds) {
+    geoManager.recordCoordinates(detail.classifieds);
   }
 });

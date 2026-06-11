@@ -45,9 +45,12 @@ export class PriceHistoryService {
    *
    * @param {string} url
    * @param {number} price
+   * @param {object} [extra]
+   * @param {string|null} [extra.geoLocation]
+   * @param {string|null} [extra.publicationDate]
    * @returns {Promise<object|null>}
    */
-  async track(url, price) {
+  async track(url, price, extra = {}) {
     await this._configPromise;
 
     if (!this._config.enabled) return Promise.resolve(null);
@@ -57,7 +60,14 @@ export class PriceHistoryService {
 
     const cacheKey = `${propertyId}:${price}`;
     if (!this._inflight.has(cacheKey)) {
-      this._inflight.set(cacheKey, this._requestTracking({ propertyId, url, price }));
+      this._inflight.set(cacheKey, this._requestTracking({
+        propertyId,
+        url,
+        price,
+        geoLocation: extra.geoLocation,
+        publicationDate: extra.publicationDate,
+        profitability: extra.profitability,
+      }));
     }
 
     return this._inflight.get(cacheKey)
@@ -75,16 +85,22 @@ export class PriceHistoryService {
   }
 
   /** @private */
-  async _requestTracking({ propertyId, url, price }) {
+  async _requestTracking({ propertyId, url, price, geoLocation, publicationDate, profitability }) {
     return new Promise((resolve) => {
       const requestId = `${propertyId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const resultEventName = `selopti:price-track-result-${requestId}`;
 
       const onResult = (event) => {
         clearTimeout(timer);
-        globalThis.removeEventListener(resultEventName, onResult);
+        window.removeEventListener(resultEventName, onResult);
 
-        const payload = event?.detail;
+        let payload = null;
+        try {
+          payload = typeof event.detail === 'string' ? JSON.parse(event.detail) : event.detail;
+        } catch (err) {
+          console.error("Selopti: Failed to parse price-track-result", err);
+        }
+
         if (payload?.success !== true) {
           resolve(null);
           return;
@@ -94,17 +110,20 @@ export class PriceHistoryService {
       };
 
       const timer = setTimeout(() => {
-        globalThis.removeEventListener(resultEventName, onResult);
+        window.removeEventListener(resultEventName, onResult);
         resolve(null);
       }, this._config.timeoutMs);
 
-      globalThis.addEventListener(resultEventName, onResult);
+      window.addEventListener(resultEventName, onResult);
       this._pendingRequests.push({
         requestId,
         propertyId,
         url,
         price,
         userUuid: this._userUuid,
+        geoLocation,
+        publicationDate,
+        profitability,
       });
       this._scheduleBatchFlush();
     });
@@ -160,11 +179,11 @@ export class PriceHistoryService {
     const batchSize = this._config.batchSize ?? this._pendingRequests.length;
     const requests = this._pendingRequests.splice(0, batchSize);
 
-    globalThis.dispatchEvent(new CustomEvent('selopti:do-track-price', {
-      detail: {
+    window.dispatchEvent(new CustomEvent('selopti:do-track-price', {
+      detail: JSON.stringify({
         endpoint: this._config.endpoint,
         requests,
-      },
+      }),
     }));
 
     if (this._pendingRequests.length > 0) {

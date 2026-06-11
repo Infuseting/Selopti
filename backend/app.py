@@ -160,6 +160,114 @@ def _track_price_entry(db, payload, client_ip):
     )
     inserted = True
 
+  # --- Track profitability history if present in payload ---
+  profitability = payload.get("profitability")
+  if isinstance(profitability, dict):
+    surf = profitability.get("surface")
+    beds = profitability.get("bedrooms")
+    charges = profitability.get("monthlyCharges")
+    avg_rent = profitability.get("averageRentM2")
+    dpe = profitability.get("dpe")
+
+    config = profitability.get("config") or {}
+    mortgage = config.get("mortgage") or {}
+    roi_config = config.get("roi") or {}
+    coloc = config.get("coloc") or {}
+
+    m_rate = mortgage.get("annualRate")
+    m_dur = mortgage.get("durationYears")
+    m_dp = mortgage.get("downPaymentRatio")
+
+    fn_pct = roi_config.get("fraisNotairePct")
+    pno_pct = roi_config.get("pnoAnnualPct")
+    ent_pct = roi_config.get("entretienAnnualPct")
+    vac_class = roi_config.get("vacanceClassiqueMois")
+    vac_coloc = roi_config.get("vacanceColocMois")
+    tmi = roi_config.get("tmi")
+    terr_pct = roi_config.get("terrainPct")
+
+    coloc_sz = coloc.get("roomSizeM2")
+    coloc_coef = coloc.get("appartCoef")
+
+    r_brute = profitability.get("rentabilityBrute")
+    r_nette = profitability.get("rentabilityNette")
+    cf_mensuel = profitability.get("cashflowMensuel")
+    score = profitability.get("score")
+    v_signal = profitability.get("verdictSignal")
+
+    # Fetch last recorded profitability entry for this property and user
+    last_row = db.execute(
+      """
+      SELECT price, surface, bedrooms, monthly_charges, average_rent_m2, dpe,
+             mortgage_annual_rate, mortgage_duration_years, mortgage_down_payment_ratio,
+             frais_notaire_pct, pno_annual_pct, entretien_annual_pct,
+             vacance_classique_mois, vacance_coloc_mois, tmi, terrain_pct,
+             coloc_room_size_m2, coloc_appart_coef,
+             rentability_brute, rentability_nette, cashflow_mensuel, score, verdict_signal
+      FROM profitability_history
+      WHERE bien_id = ? AND user_uuid = ?
+      ORDER BY recorded_at DESC, id DESC
+      LIMIT 1
+      """,
+      (property_id, user_uuid),
+    ).fetchone()
+
+    has_diff = True
+    if last_row is not None:
+      def approx_eq(a, b):
+        if a is None and b is None: return True
+        if a is None or b is None: return False
+        try:
+          return abs(float(a) - float(b)) < 1e-6
+        except (ValueError, TypeError):
+          return str(a) == str(b)
+
+      has_diff = not (
+        approx_eq(last_row["price"], price) and
+        approx_eq(last_row["surface"], surf) and
+        approx_eq(last_row["bedrooms"], beds) and
+        approx_eq(last_row["monthly_charges"], charges) and
+        approx_eq(last_row["average_rent_m2"], avg_rent) and
+        approx_eq(last_row["dpe"], dpe) and
+        approx_eq(last_row["mortgage_annual_rate"], m_rate) and
+        approx_eq(last_row["mortgage_duration_years"], m_dur) and
+        approx_eq(last_row["mortgage_down_payment_ratio"], m_dp) and
+        approx_eq(last_row["frais_notaire_pct"], fn_pct) and
+        approx_eq(last_row["pno_annual_pct"], pno_pct) and
+        approx_eq(last_row["entretien_annual_pct"], ent_pct) and
+        approx_eq(last_row["vacance_classique_mois"], vac_class) and
+        approx_eq(last_row["vacance_coloc_mois"], vac_coloc) and
+        approx_eq(last_row["tmi"], tmi) and
+        approx_eq(last_row["terrain_pct"], terr_pct) and
+        approx_eq(last_row["coloc_room_size_m2"], coloc_sz) and
+        approx_eq(last_row["coloc_appart_coef"], coloc_coef) and
+        approx_eq(last_row["rentability_brute"], r_brute) and
+        approx_eq(last_row["rentability_nette"], r_nette) and
+        approx_eq(last_row["cashflow_mensuel"], cf_mensuel) and
+        approx_eq(last_row["score"], score) and
+        approx_eq(last_row["verdict_signal"], v_signal)
+      )
+
+    if has_diff:
+      db.execute(
+        """
+        INSERT INTO profitability_history (
+          bien_id, user_uuid, price, surface, bedrooms, monthly_charges, average_rent_m2, dpe,
+          mortgage_annual_rate, mortgage_duration_years, mortgage_down_payment_ratio,
+          frais_notaire_pct, pno_annual_pct, entretien_annual_pct,
+          vacance_classique_mois, vacance_coloc_mois, tmi, terrain_pct,
+          coloc_room_size_m2, coloc_appart_coef,
+          rentability_brute, rentability_nette, cashflow_mensuel, score, verdict_signal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+          property_id, user_uuid, price, surf, beds, charges, avg_rent, dpe,
+          m_rate, m_dur, m_dp, fn_pct, pno_pct, ent_pct,
+          vac_class, vac_coloc, tmi, terr_pct, coloc_sz, coloc_coef,
+          r_brute, r_nette, cf_mensuel, score, v_signal
+        )
+      )
+
   history_rows = db.execute(
     """
     SELECT id, price, recorded_at

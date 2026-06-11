@@ -39,7 +39,12 @@ export class RentService {
 
       const handler = (event) => {
         window.removeEventListener(eventName, handler);
-        const rentData = event.detail;
+        let rentData = null;
+        try {
+          rentData = typeof event.detail === 'string' ? JSON.parse(event.detail) : event.detail;
+        } catch (err) {
+          console.error("Selopti: Failed to parse rent result detail", err);
+        }
         if (rentData?.items?.length > 0) {
           const item = rentData.items[0];
           resolve(

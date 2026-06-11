@@ -10,10 +10,10 @@ injectorScript.type = 'text/javascript';
 (document.head || document.documentElement).appendChild(injectorScript);
 
 // 2. Écouter les événements geo interceptés
-globalThis.addEventListener('selopti:geo-intercepted', (event) => {
+window.addEventListener('selopti:geo-intercepted', (event) => {
 
   // Passer les données à l'engine via un event custom
-  globalThis.dispatchEvent(new CustomEvent('selopti:geo-data', {
+  window.dispatchEvent(new CustomEvent('selopti:geo-data', {
     detail: event.detail
   }));
 });
