@@ -4,7 +4,7 @@
   "description": "",
   "main": "content.js",
   "scripts": {
-    "build": "esbuild src/content.js --bundle --outfile=dist/content.js && esbuild src/injector.js --bundle --outfile=dist/injector.js && esbuild src/options.js --bundle --outfile=dist/options.js",
+    "build": "node build.js",
     "watch": "esbuild src/content.js src/injector.js src/options.js --bundle --outdir=dist --watch"
   },
   "repository": {
@@ -19,6 +19,8 @@
   },
   "homepage": "https://github.com/Infuseting/Selopti#readme",
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "bestzip": "^3.0.1",
+    "esbuild": "^0.28.0",
+    "javascript-obfuscator": "^5.4.3"
   }
 }
