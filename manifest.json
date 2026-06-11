@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Selopti",
   "version": "0.1.0",
-  "description": "Logs new .classified-card elements on SeLoger pages.",
+  "description": "",
   "permissions": [
     "activeTab",
     "storage"

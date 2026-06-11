@@ -15,7 +15,7 @@ export class SeloptiInserter {
       return null;
     }
 
-    if (hostElement.matches && hostElement.matches(TARGET_SELECTOR)) {
+    if (hostElement.matches?.(TARGET_SELECTOR)) {
       return hostElement;
     }
 

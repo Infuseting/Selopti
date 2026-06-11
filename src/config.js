@@ -11,7 +11,7 @@ export const MORTGAGE_DEFAULTS = {
   /** Loan duration in years. */
   durationYears: 20,
   /** Fraction of the property price paid upfront as a down payment. */
-  downPaymentRatio: 0.20,
+  downPaymentRatio: 0.2,
 };
 
 /** Colocation (house-sharing) simulation parameters. */
@@ -20,6 +20,33 @@ export const COLOC_CONFIG = {
   roomSizeM2: 10,
   /** Weight applied to shared area value in per-room pricing. */
   appartCoef: 0.4,
+};
+
+/**
+ * ROI scoring hypotheses — conservative defaults used when data is missing.
+ * All percentage values are decimals (e.g. 0.08 = 8 %).
+ */
+export const ROI_DEFAULTS = {
+  /** Notaire fees as a fraction of property price (ancien). */
+  fraisNotairePct: 0.08,
+  /** Annual PNO insurance as a fraction of property price. */
+  pnoAnnualPct: 0.002,
+  /** Annual maintenance/works as a fraction of property price. */
+  entretienAnnualPct: 0.005,
+  /**
+   * Vacancy months per year for classic (non-furnished) rental.
+   * Stat: ~1 month average for standard long-term leases.
+   */
+  vacanceClassiqueMois: 1,
+  /**
+   * Vacancy months per year for co-living / colocation.
+   * Stat: ~2 months due to higher tenant turnover (students, short contracts).
+   */
+  vacanceColocMois: 2,
+  /** Default marginal tax rate (TMI) when not provided by the user. */
+  tmi: 0.3,
+  /** Non-depreciable land fraction of property price (LMNP). */
+  terrainPct: 0.15,
 };
 
 /**
@@ -63,6 +90,9 @@ export const SELOPTI_CONFIG_DEFAULTS = {
   },
   coloc: {
     ...COLOC_CONFIG,
+  },
+  roi: {
+    ...ROI_DEFAULTS,
   },
   chargesExcludedLabels: [...CHARGES_EXCLUDED_LABELS],
   priceTracker: {
@@ -126,6 +156,18 @@ export function normalizeColocConfig(config = {}) {
   };
 }
 
+export function normalizeROIConfig(config = {}) {
+  return {
+    fraisNotairePct:    toRatio(config.fraisNotairePct,    ROI_DEFAULTS.fraisNotairePct),
+    pnoAnnualPct:       toRatio(config.pnoAnnualPct,       ROI_DEFAULTS.pnoAnnualPct),
+    entretienAnnualPct: toRatio(config.entretienAnnualPct, ROI_DEFAULTS.entretienAnnualPct),
+    vacanceClassiqueMois: toFiniteNumber(config.vacanceClassiqueMois, ROI_DEFAULTS.vacanceClassiqueMois),
+    vacanceColocMois:     toFiniteNumber(config.vacanceColocMois,     ROI_DEFAULTS.vacanceColocMois),
+    tmi:        toRatio(config.tmi,        ROI_DEFAULTS.tmi),
+    terrainPct: toRatio(config.terrainPct, ROI_DEFAULTS.terrainPct),
+  };
+}
+
 export function normalizeChargesExcludedLabels(value = []) {
   return toStringList(value, CHARGES_EXCLUDED_LABELS);
 }
@@ -146,6 +188,7 @@ export function normalizeSeloptiConfig(config = {}) {
   return {
     mortgage: normalizeMortgageConfig(config.mortgage ?? config.mortgageDefaults ?? {}),
     coloc: normalizeColocConfig(config.coloc ?? config.colocConfig ?? {}),
+    roi: normalizeROIConfig(config.roi ?? {}),
     chargesExcludedLabels: normalizeChargesExcludedLabels(
       config.chargesExcludedLabels ?? config.charges?.excludedLabels ?? [],
     ),

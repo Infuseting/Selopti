@@ -10,6 +10,7 @@ import { PriceHistoryService } from './services/PriceHistoryService.js';
 import { ChargesParser } from './finance/ChargesParser.js';
 import { MortgageCalculator } from './finance/MortgageCalculator.js';
 import { FinancialSimulator } from './finance/FinancialSimulator.js';
+import { ROIScorer } from './finance/ROIScorer.js';
 import { normalizeSeloptiConfig } from './config.js';
 
 /**
@@ -30,6 +31,7 @@ export class SeloptiEngine {
    * @param {PriceHistoryService} [deps.priceHistoryService]
    * @param {ChargesParser}       [deps.chargesParser]
    * @param {FinancialSimulator}  [deps.simulator]
+   * @param {ROIScorer}           [deps.roiScorer]
    */
   constructor({
     scanner,
@@ -38,6 +40,7 @@ export class SeloptiEngine {
     priceHistoryService,
     chargesParser,
     simulator,
+    roiScorer,
     config,
   } = {}) {
     const runtimeConfig = normalizeSeloptiConfig(config);
@@ -49,6 +52,7 @@ export class SeloptiEngine {
       new MortgageCalculator(runtimeConfig.mortgage),
       runtimeConfig.coloc,
     );
+    this._roiScorer = roiScorer ?? new ROIScorer(runtimeConfig.roi);
     this.scanner = scanner ?? new DOMScanner(
       (id, element, url) => this._handleMatchedElement(id, element, url),
     );
@@ -92,6 +96,18 @@ export class SeloptiEngine {
       averageRentM2,
     });
 
+    const roiScore = this._roiScorer.score({
+      propertyPrice,
+      surface:       basicStats.surface  || 0,
+      bedrooms:      basicStats.bedrooms || 0,
+      monthlyCharges,
+      simulations:   simulationsData,
+      priceInfo:     extractData?.priceInfo   || [],
+      energy:        extractData?.energy      || [],
+      features:      extractData?.features    || [],
+      description:   extractData?.description || '',
+    });
+
     const finalData = {
       ...extractData,
       coordinates: geoData.coordinates,
@@ -99,6 +115,7 @@ export class SeloptiEngine {
       averageRentM2,
       simulations: simulationsData,
       priceHistory,
+      roiScore,
     };
 
     seloptiExport.save({

@@ -1,3 +1,107 @@
+// ── Selopti interaction layer ──────────────────────────────────────────────
+// Registered on document in CAPTURE phase, before SeLoger's own handlers,
+// so we can stop navigation and handle details/tooltips ourselves.
+(function initSeloptiInteractionLayer() {
+  if (globalThis.__seloptiLayerInit) return;
+  globalThis.__seloptiLayerInit = true;
+
+  // ── Tooltip element (created lazily once body exists) ──────────────────
+  let _tip = null;
+  function getTip() {
+    if (_tip && document.body.contains(_tip)) return _tip;
+    _tip = document.createElement('div');
+    _tip.id = 'selopti-tooltip';
+    const s = _tip.style;
+    s.position      = 'fixed';
+    s.zIndex        = '2147483647';
+    s.pointerEvents = 'none';
+    s.display       = 'none';
+    s.maxWidth      = '300px';
+    s.background    = '#0f172a';
+    s.color         = '#f1f5f9';
+    s.fontFamily    = "'Inter', system-ui, sans-serif";
+    s.fontSize      = '12px';
+    s.lineHeight    = '1.55';
+    s.padding       = '10px 13px';
+    s.borderRadius  = '10px';
+    s.boxShadow     = '0 8px 28px rgba(0,0,0,0.35)';
+    s.whiteSpace    = 'pre-line';
+    (document.body || document.documentElement).appendChild(_tip);
+    return _tip;
+  }
+
+  // ── Click: prevent card navigation + handle details toggle ────────────
+  // capture=true → fires before EVERY other listener in the page
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const container = target.closest('.selopti-container');
+    if (!container) return;
+
+    // Prevent <a> navigation and stop all other handlers
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // Manually toggle <details> because preventDefault cancels the native
+    // activation behaviour of <summary>
+    const summary = target.closest('summary');
+    if (summary) {
+      const details = summary.closest('details');
+      if (details) details.open = !details.open;
+    }
+  }, true);
+
+  // Stop mousedown/pointerdown from bubbling to SeLoger (prevents drag-select
+  // or other press-start handlers on the card)
+  ['mousedown', 'pointerdown'].forEach((type) => {
+    document.addEventListener(type, (e) => {
+      if (!(e.target instanceof Element)) return;
+      if (e.target.closest('.selopti-container')) {
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  });
+
+  // ── Tooltip: mouseover (bubbles, so we catch all inner elements) ───────
+  document.addEventListener('mouseover', (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const el = target.closest('[data-selopti-tip]');
+    if (!el) return;
+    const text = el.dataset.seloptiTip;
+    if (!text) return;
+
+    const tip = getTip();
+    tip.innerHTML = text;
+    tip.style.display = 'block';
+
+    const rect  = el.getBoundingClientRect();
+    const tipW  = 300;
+    const tipH  = tip.offsetHeight || 80;
+    const gap   = 8;
+    let top    = rect.top - tipH - gap;
+    if (top < 8) top = rect.bottom + gap;
+    let left   = rect.left + rect.width / 2 - tipW / 2;
+    if (left + tipW > globalThis.innerWidth - 8) left = globalThis.innerWidth - tipW - 8;
+    if (left < 8) left = 8;
+
+    tip.style.top  = Math.round(top)  + 'px';
+    tip.style.left = Math.round(left) + 'px';
+  }, true);
+
+  document.addEventListener('mouseout', (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    if (!target.closest('[data-selopti-tip]')) return;
+    // Hide only when truly leaving the element (not moving to a child)
+    if (!target.contains(e.relatedTarget)) {
+      const tip = document.getElementById('selopti-tooltip');
+      if (tip) tip.style.display = 'none';
+    }
+  }, true);
+
+}());
+
 // Expose seloptiExport helper in the page world (reads from localStorage shared with content script)
 window.seloptiExport = {
   get entries() {
