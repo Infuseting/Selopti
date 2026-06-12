@@ -60,10 +60,22 @@ export class SeloptiEngine {
     );
   }
 
+  /**
+   * Initializes the engine by starting the DOM scanner on the current document.
+   */
   init() {
     this.scanner.start(document);
   }
 
+  /**
+   * Handles a matched real-estate property element in the DOM.
+   * Fetches property data and subscribes to geolocation updates.
+   *
+   * @param {string} id - The unique identifier of the property.
+   * @param {Element} element - The DOM element of the property listing.
+   * @param {string} fullHref - The full URL of the property listing.
+   * @returns {Promise<void>}
+   */
   async _handleMatchedElement(id, element, fullHref) {
     this.inserter.insertHTML(id, element, UIHTMLRenderer.renderLoadingHTML());
 
@@ -82,6 +94,21 @@ export class SeloptiEngine {
     });
   }
 
+  /**
+   * Renders the full property details and injects the UI into the page.
+   * Computes simulations, ROI score, and tracks price history before rendering.
+   *
+   * @param {object} params - The context parameters for rendering.
+   * @param {string} params.id - The property ID.
+   * @param {Element} params.element - The DOM element.
+   * @param {string} params.fullHref - The URL of the property.
+   * @param {string} params.zoneId - The geographic zone ID.
+   * @param {object} params.data - The raw property data.
+   * @param {object} params.basicStats - Extracted basic statistics.
+   * @param {number} params.averageRentM2 - The average rent per square meter.
+   * @param {object} params.geoData - Geolocation data.
+   * @returns {Promise<void>}
+   */
   async _renderProperty({ id, element, fullHref, zoneId, data, basicStats, averageRentM2, geoData }) {
     const extractData = getData(data);
     const monthlyCharges = this._chargesParser.parseMonthly(extractData?.priceInfo);

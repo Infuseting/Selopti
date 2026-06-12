@@ -1,4 +1,10 @@
-﻿export class UIHTMLRenderer {
+/**
+ * UIHTMLRenderer
+ *
+ * Responsible for rendering all HTML components injected into the property listing.
+ * Follows the Single Responsibility Principle by isolating UI concerns from data processing.
+ */
+export class UIHTMLRenderer {
 
   // ─────────────────────────────────────────────────────────────────────────
   //  Formatters
@@ -715,6 +721,12 @@
   //  Loading skeleton
   // ─────────────────────────────────────────────────────────────────────────
 
+  /**
+   * Generates a skeleton loading state HTML string to be injected immediately
+   * while property data is being fetched and analyzed.
+   *
+   * @returns {string} The HTML string representing the loading skeleton.
+   */
   static renderLoadingHTML() {
     const anim = `background:linear-gradient(90deg,#e2e8f0 0%,#f8fafc 45%,#e2e8f0 100%);background-size:200% 100%;animation:selopti-shimmer 1.4s ease-in-out infinite;`;
     const blk  = (h, w = '100%', r = '8px') =>
@@ -770,6 +782,14 @@
   //  Main render
   // ─────────────────────────────────────────────────────────────────────────
 
+  /**
+   * Orchestrates and renders the complete details HTML block containing KPIs, 
+   * simulations, break-even points, and price history trends.
+   *
+   * @param {object} data - The complete property data including simulations and ROI score.
+   * @param {number} averageRentM2 - The average rent per square meter for the area.
+   * @returns {string} The complete HTML string to be injected.
+   */
   static renderDetailsHTML(data, averageRentM2) {
     const classic  = data.simulations?.classic;
     const coloc    = data.simulations?.collocation;
